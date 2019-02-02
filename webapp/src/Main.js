@@ -1,9 +1,9 @@
 import React from 'react';
 
 export default class Main extends React.Component {
-  constructor(props) {
-    super(props);
-  }
+  // constructor(props) {
+  //   super(props);
+  // }
 
   render() {
     return (<div className="card mt-3">
