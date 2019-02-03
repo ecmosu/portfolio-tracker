@@ -1,0 +1,21 @@
+{
+  "name": "portfolio-tracker-wepapi",
+  "version": "1.0.0",
+  "description": "Server",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "server-start": "node --inspect server.js & npm start --prefix ../webapp"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcrypt": "^3.0.3",
+    "body-parser": "^1.18.3",
+    "express": "^4.16.4",
+    "express-session": "^1.15.6",
+    "mysql": "^2.16.0",
+    "path": "^0.12.7",
+    "promise-mysql": "^3.3.1"
+  }
+}
