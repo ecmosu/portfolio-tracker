@@ -27,13 +27,23 @@ export default class Login extends React.Component {
                     'Content-Type': 'application/json'
                 }
             });
-            const result = await response.json();
-            this.props.appState.onUserDetailChange(result);
-            this.props.history.push('/');
+            if (response.status === 200) {
+                const result = await response.json();
+                this.props.appState.onUserDetailChange(result);
+                if (result.loggedIn) {
+                    this.props.history.push('/');
+                }
+                else {
+                    this.props.appState.onStatusMessageChange(!result.loggedIn, (<div><strong>Alert!</strong> {result.message}</div>));
+                }
+            }
+            else {
+                this.props.appState.onStatusMessageChange(true, (<div><strong>Alert!</strong> An unknown error was encountered while attempting to login.</div>));
+            }
         }
         catch
         {
-            let detail = { loggedIn: false, user: '' };            
+            let detail = { loggedIn: false, user: '' };
             this.props.appState.onUserDetailChange(detail);
             this.props.appState.onStatusMessageChange(true, (<div><strong>Alert!</strong> Invalid username or password!</div>));
         }
@@ -57,7 +67,7 @@ export default class Login extends React.Component {
                         <FormGroup row>
                             <Label for="inputPass" sm={2}>Password</Label>
                             <Col sm={10}>
-                                <Input required type="password" minLength="6" name="inputPass" id="inputPass"  onChange={this.handleOnChange} />
+                                <Input required type="password" minLength="6" name="inputPass" id="inputPass" onChange={this.handleOnChange} />
                             </Col>
                         </FormGroup>
                         <Button type="submit" className="float-right">Submit</Button>

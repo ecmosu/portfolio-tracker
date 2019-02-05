@@ -57,7 +57,7 @@ app.post('/login', async (req, res) => {
     catch (err) {
         console.log(err);
     }
-    res.send({ loggedIn: false, user: '' });
+    res.send({ loggedIn: false, user: '', message: 'Invalid username or password.' });
 });
 
 app.get('/logout', async (req, res) => {
