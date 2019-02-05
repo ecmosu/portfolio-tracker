@@ -10,25 +10,23 @@ export default class Portfolios extends React.Component {
         };
     }
 
-    updatePortfolios() {
-        this.setState({ isLoaded: false });
-        fetch(`./api/getList`)
-            .then(res => res.json())
-            .then(
-                (result) => {
-                    this.setState({
-                        error: null,
-                        isLoaded: true,
-                        portfolios: result
-                    });
-                },
-                (error) => {
-                    this.setState({
-                        isLoaded: true,
-                        error
-                    });
-                }
-            )
+    async updatePortfolios() {
+        try {
+            this.setState({ isLoaded: false });
+            const response = await fetch(`./api/getList`);
+            if (response.status === 200) {
+                const json = await response.json();
+                this.setState({
+                    error: null,
+                    isLoaded: true,
+                    portfolios: json
+                });
+            }
+            else { console.log('Update Portfolios - Invalid Server Response'); }
+        }
+        catch (err) {
+            console.log(err);
+        }
     }
 
     componentDidMount() {

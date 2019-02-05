@@ -2,9 +2,11 @@ import React from 'react';
 import Portfolios from './Portfolios';
 
 export default class Main extends React.Component {
-  // constructor(props) {
-  //   super(props);
-  // }
+
+  componentDidMount() {
+    this.props.appState.onStatusMessageChange(false, '');
+    this.props.appState.onLoadingChange(false);
+  }
 
   render() {
     return (<div className="card mt-3">
