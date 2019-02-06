@@ -1,25 +1,24 @@
 import React from 'react';
+import { Button, Table } from 'reactstrap';
+import { Link } from 'react-router-dom'
 
 export default class Portfolios extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            error: null,
-            isLoaded: false,
             portfolios: []
         };
     }
 
     async updatePortfolios() {
         try {
-            this.setState({ isLoaded: false });
-            const response = await fetch(`./api/getList`);
+            this.props.appState.onStatusMessageChange(false, '');
+            this.props.appState.onLoadingChange(true);
+            const response = await fetch(`./portfolios`);
             if (response.status === 200) {
                 const json = await response.json();
                 this.setState({
-                    error: null,
-                    isLoaded: true,
-                    portfolios: json
+                    portfolios: json.portfolios
                 });
             }
             else { console.log('Update Portfolios - Invalid Server Response'); }
@@ -27,6 +26,7 @@ export default class Portfolios extends React.Component {
         catch (err) {
             console.log(err);
         }
+        this.props.appState.onLoadingChange(false);
     }
 
     componentDidMount() {
@@ -34,26 +34,35 @@ export default class Portfolios extends React.Component {
     }
 
     render() {
-        const { error, isLoaded, portfolios } = this.state;
-        if (error) {
-            return (<div>
-                <div className="alert alert-primary" role="alert">
-                    Portfolios did not load successfully!
-                </div>
-            </div>)
-        } else if (!isLoaded) {
-            return <div>Loading...</div>;
-        } else {
+        const { portfolios } = this.state;
+        const portfolioRows = portfolios.map((portfolio) => {
             return (
-                <div className="mt-3">
-
-                    <div className="card mt-3">
-                        <div className="card-body">
-                            <h1 className="card-title">Test: {portfolios[0]}</h1>
-                        </div>
-                    </div>
-                </div>
-            );
+                <tr key={portfolio.portfolio_id}>
+                    <td>{portfolio.portfolio_name}</td>
+                    <td>
+                        <Link className="btn btn-primary btn-sm active" role="button" to={"/portfolios/" + portfolio.portfolio_id}>Select</Link>
+                        <span> | </span>
+                        <Link className="btn btn-primary btn-sm active" role="button" to={"/portfolios/" + portfolio.portfolio_id}>Delete</Link>
+                    </td>
+                </tr>
+            )
+        })
+        if (portfolios.length === 0) {
+            return (<div>No Portfolios have been created.</div>)
+        }
+        else {
+            return (
+                <Table hover>
+                    <thead>
+                        <tr>
+                            <th>Portfolio</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {portfolioRows}
+                    </tbody>
+                </Table>)
         }
     }
 }

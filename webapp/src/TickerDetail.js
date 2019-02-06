@@ -1,40 +1,36 @@
 import React from 'react';
 
-const CORRECTION_MARKET_THRESHOLD = -.1;
-const BEAR_MARKET_THRESHOLD = -.2;
-
 export default class TickerDetail extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            error: null,
             isLoaded: false,
             quoteResult: []
         };
     }
 
     updateTickerResults() {
-        this.setState({ isLoaded: false });
-        fetch(`https://api.iextrading.com/1.0/stock/${this.props.ticker}/quote`)
-            .then(res => res.json())
-            .then(
-                (result) => {
-                    this.setState({
-                        error: null,
-                        isLoaded: true,
-                        quoteResult: result
-                    });
-                },
-                // Note: it's important to handle errors here
-                // instead of a catch() block so that we don't swallow
-                // exceptions from actual bugs in components.
-                (error) => {
-                    this.setState({
-                        isLoaded: true,
-                        error
-                    });
-                }
-            )
+        if (this.props.ticker !== "") {
+            this.props.appState.onLoadingChange(true);
+            this.setState({ isLoaded: false });
+            fetch(`https://api.iextrading.com/1.0/stock/${this.props.ticker}/quote`)
+                .then(res => res.json())
+                .then(
+                    (result) => {
+                        this.setState({
+                            isLoaded: true,
+                            quoteResult: result
+                        });
+                        this.props.appState.onLoadingChange(false);
+                    },
+                    // Note: it's important to handle errors here
+                    // instead of a catch() block so that we don't swallow
+                    // exceptions from actual bugs in components.
+                    (error) => {
+                        this.props.appState.onLoadingChange(false);
+                    }
+                )
+        }
     }
 
     formatter(loc, settings) {
@@ -54,39 +50,15 @@ export default class TickerDetail extends React.Component {
     }
 
     render() {
-        const { error, isLoaded, quoteResult } = this.state;
+        const { quoteResult } = this.state;
         const decimalFormater = this.formatter('en-US', { maximumFractionDigits: 2 });
         const percentFormater = this.formatter('en-US', { style: "percent", maximumFractionDigits: 2 });
         const distanceFromHigh = (quoteResult.latestPrice - quoteResult.week52High);
         const percentChange = (distanceFromHigh / quoteResult.week52High);
-        if (error) {
-            return (<div>
-                <div className="alert alert-primary" role="alert">
-                    Please enter a valid security!
-                </div>
-            </div>)
-        } else if (!isLoaded) {
-            return <div>Loading...</div>;
-        } else {
+        if (this.props.ticker === "" || !this.state.isLoaded) { return null }
+        else {
             return (
                 <div className="mt-3">
-                    {(() => {
-                        if (percentChange <= BEAR_MARKET_THRESHOLD) {
-                            return (<div className="alert alert-danger" role="alert">
-                                This security is currently in bear territory when compared to its 52 week high!
-                            </div>)
-                        }
-                        else if (percentChange <= CORRECTION_MARKET_THRESHOLD) {
-                            return (<div className="alert alert-warning" role="alert">
-                                This security is currently in correction territory when compared to its 52 week high!
-                            </div>)
-                        }
-                        else {
-                            return (<div className="alert alert-primary" role="alert">
-                                This security is not in bear territory!
-                            </div>)
-                        }
-                    })()}
                     <div className="card mt-3">
                         <div className="card-body">
                             <h1 className="card-title">{quoteResult.companyName}</h1>

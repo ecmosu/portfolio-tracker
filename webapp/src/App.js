@@ -3,8 +3,6 @@ import Login from './Login';
 import Main from './Main';
 import NavBar from './NavBar';
 import Portfolio from './Portfolio';
-import SecurityLookup from './SecurityLookup';
-import Sources from './Sources';
 import { HashRouter as Router, Route, Switch, Redirect } from "react-router-dom";
 import { Alert, Container } from 'reactstrap';
 import Signup from './Signup';
@@ -17,7 +15,7 @@ class App extends React.Component {
     this.handleStatusMessageChange = this.handleStatusMessageChange.bind(this);
     this.onDismiss = this.onDismiss.bind(this);
     this.state = {
-      isLoading: true,
+      isLoading: false,
       showMessage: false,
       message: '',
       userDetail: { loggedIn: false, user: '' }
@@ -108,8 +106,6 @@ class App extends React.Component {
                 render={(props) => <Portfolio {...props}
                   appState={appStateDetail}
                 />} />
-              <Route path="/securitylookup" component={SecurityLookup} />
-              <Route path="/sources" component={Sources} />
               <Route path="/"
                 render={(props) => <Main {...props}
                   appState={appStateDetail}

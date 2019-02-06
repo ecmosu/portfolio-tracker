@@ -19,13 +19,7 @@ const loginButton = (userDetail) => {
                     <NavLink tag={Link} to="./">Portfolios</NavLink>
                 </NavItem>
                 <NavItem>
-                    <NavLink tag={Link} to="./securitylookup">Security Lookup</NavLink>
-                </NavItem>
-                <NavItem>
-                    <NavLink tag={Link} to="./sources">Sources</NavLink>
-                </NavItem>
-                <NavItem>
-                    <NavLink tag={Link} to="./logout">Logout {userDetail.user}</NavLink>
+                    <NavLink tag={Link} to="/logout">Logout {userDetail.user}</NavLink>
                 </NavItem>
             </Nav>
         );
