@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Table } from 'reactstrap';
-// import { Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import TickerDetail from './TickerDetail';
 
 export default class Portfolio extends React.Component {
@@ -55,6 +55,7 @@ export default class Portfolio extends React.Component {
             return (
                 <div>
                     <TickerDetail {...this.props} ticker={this.state.selectedSecurity}></TickerDetail>
+                    <Link className="btn btn-primary btn-sm active mb-3 mt-3" role="button" to={"#"}>Add Holding</Link>
                     <Table hover>
                         <thead>
                             <tr>

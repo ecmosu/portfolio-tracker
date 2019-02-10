@@ -105,6 +105,20 @@ export default class TickerDetail extends React.Component {
                                     {percentFormater(percentChange)}
                                 </dd>
                             </dl>
+                            <dl className="row">
+                                <dt className="col-3">
+                                    Investment Type
+                        </dt>
+                                <dd className="col-3">
+                                    ETF
+                                </dd>
+                                <dt className="col-3">
+                                    Sector
+                            </dt>
+                                <dd className="col-3">
+                                    Fund
+                                </dd>
+                            </dl>
                         </div>
                     </div>
                 </div>

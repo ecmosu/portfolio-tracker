@@ -19,6 +19,9 @@ const loginButton = (userDetail) => {
                     <NavLink tag={Link} to="./">Portfolios</NavLink>
                 </NavItem>
                 <NavItem>
+                    <NavLink tag={Link} to="/pages">Site Links</NavLink>
+                </NavItem>
+                <NavItem>
                     <NavLink tag={Link} to="/logout">Logout {userDetail.user}</NavLink>
                 </NavItem>
             </Nav>
@@ -31,10 +34,13 @@ const loginButton = (userDetail) => {
                     <NavLink tag={Link} to="./">Main</NavLink>
                 </NavItem>
                 <NavItem>
-                    <NavLink tag={Link} to="./login">Login</NavLink>
+                    <NavLink tag={Link} to="/pages">Site Links</NavLink>
                 </NavItem>
                 <NavItem>
-                    <NavLink tag={Link} to="./signup">Sign Up</NavLink>
+                    <NavLink tag={Link} to="/login">Login</NavLink>
+                </NavItem>
+                <NavItem>
+                    <NavLink tag={Link} to="/signup">Sign Up</NavLink>
                 </NavItem>
             </Nav>
         );

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Table } from 'reactstrap';
+import { Table } from 'reactstrap';
 import { Link } from 'react-router-dom'
 
 export default class Portfolios extends React.Component {
@@ -14,14 +14,21 @@ export default class Portfolios extends React.Component {
         try {
             this.props.appState.onStatusMessageChange(false, '');
             this.props.appState.onLoadingChange(true);
-            const response = await fetch(`./portfolios`);
-            if (response.status === 200) {
-                const json = await response.json();
-                this.setState({
-                    portfolios: json.portfolios
-                });
-            }
-            else { console.log('Update Portfolios - Invalid Server Response'); }
+            // const response = await fetch(`./portfolios`);
+            // if (response.status === 200) {
+            //     const json = await response.json();
+            //     this.setState({
+            //         portfolios: json.portfolios
+            //     });
+            // }
+            // else { console.log('Update Portfolios - Invalid Server Response'); }
+            this.setState({
+                        portfolios: [
+                            {portfolio_id: 1, portfolio_name: "401K"},
+                            {portfolio_id: 2, portfolio_name: "Roth"},
+                            {portfolio_id: 3, portfolio_name: "Taxable"}
+                        ]
+                    });
         }
         catch (err) {
             console.log(err);
@@ -51,7 +58,8 @@ export default class Portfolios extends React.Component {
             return (<div>No Portfolios have been created.</div>)
         }
         else {
-            return (
+            return (<div>
+                <Link className="btn btn-primary btn-sm active mb-3" role="button" to={"#"}>Add Portfolio</Link>
                 <Table hover>
                     <thead>
                         <tr>
@@ -62,7 +70,8 @@ export default class Portfolios extends React.Component {
                     <tbody>
                         {portfolioRows}
                     </tbody>
-                </Table>)
+                </Table>
+                </div>)
         }
     }
 }

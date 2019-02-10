@@ -60,3 +60,33 @@ CREATE TABLE `holdings` (
   CONSTRAINT `holdings_ibfk_1` FOREIGN KEY (`portfolio_id`) REFERENCES `portfolios` (`portfolio_id`),
   CONSTRAINT `holdings_ibfk_2` FOREIGN KEY (`investment_id`) REFERENCES `investments` (`investment_id`)
 ) ENGINE = InnoDB;
+
+INSERT INTO users (username, password_hash) VALUES ('TestUser', '$2b$10$an7Mdvqxap5FlWLdz279RuaRSUiLg/PiWYCGu/G/20UBSiKDc5FnK');
+INSERT INTO portfolios (portfolio_name, user_id) VALUES ('401K', 1);
+INSERT INTO portfolios (portfolio_name, user_id) VALUES ('Roth', 1);
+INSERT INTO portfolios (portfolio_name, user_id) VALUES ('Taxable', 1);
+INSERT INTO sectors (sector_name) VALUES ('Fund');
+INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('AD', 'ADR');
+INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('RE', 'REIT');
+INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('CE', 'CE');
+INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('SI', 'SI');
+INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('LP', 'LP');
+INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('CS', 'CS');
+INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('ET', 'ETF');
+INSERT INTO investments (symbol, investment_name, investmenttype_id, latest_closing_price, sector_id)
+  VALUES ('DIA', 'SPDR Dow Jones Industrial Average', 7, 251.32, 1);
+INSERT INTO investments (symbol, investment_name, investmenttype_id, latest_closing_price, sector_id)
+  VALUES ('SPY', 'SPDR S&P 500', 7, 270.47, 1);
+INSERT INTO holdings (portfolio_id, investment_id, average_cost_basis, date_updated, number_shares)
+  VALUES (1, 1, 88, NOW(), 100);
+INSERT INTO holdings (portfolio_id, investment_id, average_cost_basis, date_updated, number_shares)
+  VALUES (1, 2, 199, NOW(), 200);
+INSERT INTO holdings (portfolio_id, investment_id, average_cost_basis, date_updated, number_shares)
+  VALUES (2, 1, 88, NOW(), 100);
+INSERT INTO holdings (portfolio_id, investment_id, average_cost_basis, date_updated, number_shares)
+  VALUES (2, 2, 199, NOW(), 200);
+INSERT INTO holdings (portfolio_id, investment_id, average_cost_basis, date_updated, number_shares)
+  VALUES (3, 1, 88, NOW(), 100);
+INSERT INTO holdings (portfolio_id, investment_id, average_cost_basis, date_updated, number_shares)
+  VALUES (3, 2, 199, NOW(), 200);
+

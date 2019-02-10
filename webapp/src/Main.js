@@ -9,10 +9,11 @@ export default class Main extends React.Component {
   }
 
   detail() {
-    if (this.props.appState.state.userDetail.loggedIn) {
-      return (<Portfolios {...this.props}></Portfolios>)
-    }
-    else { return (<div>Please login or register to continue.</div>) }
+    return (<Portfolios {...this.props}></Portfolios>)
+    // if (this.props.appState.state.userDetail.loggedIn) {
+    //   return (<Portfolios {...this.props}></Portfolios>)
+    // }
+    // else { return (<div>Please login or register to continue.</div>) }
   }
 
   render() {

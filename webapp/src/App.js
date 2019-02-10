@@ -2,6 +2,7 @@ import React from 'react';
 import Login from './Login';
 import Main from './Main';
 import NavBar from './NavBar';
+import Pages from './Pages';
 import Portfolio from './Portfolio';
 import { HashRouter as Router, Route, Switch, Redirect } from "react-router-dom";
 import { Alert, Container } from 'reactstrap';
@@ -102,6 +103,10 @@ class App extends React.Component {
                   return <Redirect to={'./'} />
                 }}
               />
+              <Route path="/pages"
+                render={(props) => <Pages {...props}
+                  appState={appStateDetail}
+                />} />
               <Route path="/portfolios/:id"
                 render={(props) => <Portfolio {...props}
                   appState={appStateDetail}
