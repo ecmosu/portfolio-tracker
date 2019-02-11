@@ -10,6 +10,10 @@ export default class Login extends React.Component {
         this.state = { inputUser: '', inputPass: '' }
     }
 
+    componentDidMount() {
+        this.props.appState.onViewChange(false);
+    }
+
     handleOnChange = (e) => {
         const { value, name } = e.target
         this.setState({ [name]: value })

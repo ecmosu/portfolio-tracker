@@ -12,10 +12,12 @@ class App extends React.Component {
   constructor(props) {
     super(props);
     this.handleUserDetailChange = this.handleUserDetailChange.bind(this);
+    this.handleViewChange = this.handleViewChange.bind(this);
     this.handleLoadingChange = this.handleLoadingChange.bind(this);
     this.handleStatusMessageChange = this.handleStatusMessageChange.bind(this);
     this.onDismiss = this.onDismiss.bind(this);
     this.state = {
+      largeContainer: false,
       isLoading: false,
       showMessage: false,
       message: '',
@@ -25,6 +27,10 @@ class App extends React.Component {
 
   handleUserDetailChange(detail) {
     this.setState({ userDetail: { loggedIn: detail.loggedIn, user: detail.user } });
+  }
+
+  handleViewChange(large) {
+    this.setState({ largeContainer: large });
   }
 
   handleLoadingChange(show) {
@@ -70,6 +76,7 @@ class App extends React.Component {
     const appStateDetail = {
       state: this.state,
       onUserDetailChange: this.handleUserDetailChange,
+      onViewChange: this.handleViewChange,
       onLoadingChange: this.handleLoadingChange,
       onStatusMessageChange: this.handleStatusMessageChange
     }
@@ -87,7 +94,7 @@ class App extends React.Component {
             fade={true}>
             {this.state.message}
           </Alert>
-          <Container>
+          <Container fluid={this.state.largeContainer}>
             <Switch>
               <Route path="/login"
                 render={(props) => <Login {...props}

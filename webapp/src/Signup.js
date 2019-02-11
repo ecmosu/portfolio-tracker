@@ -9,6 +9,10 @@ export default class Signup extends React.Component {
         this.handleSignupSubmit = this.handleSignupSubmit.bind(this);
         this.state = { inputUser: '', inputPass: '' }
     }
+    
+    componentDidMount() {
+        this.props.appState.onViewChange(false);
+    }
 
     handleOnChange = (e) => {
         const { value, name } = e.target

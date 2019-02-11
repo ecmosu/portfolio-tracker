@@ -1,13 +1,20 @@
 import React from 'react';
-import { Table } from 'reactstrap';
+import { Button, Card, CardBody, CardHeader, Collapse, 
+    Input, InputGroup, InputGroupAddon, Table } from 'reactstrap';
 import { Link } from 'react-router-dom'
 
 export default class Portfolios extends React.Component {
     constructor(props) {
         super(props);
+        this.toggle = this.toggle.bind(this);
         this.state = {
+            showSection: true,
             portfolios: []
         };
+    }
+
+    toggle() {
+        this.setState({ showSection: !this.state.showSection });
     }
 
     async updatePortfolios() {
@@ -23,12 +30,12 @@ export default class Portfolios extends React.Component {
             // }
             // else { console.log('Update Portfolios - Invalid Server Response'); }
             this.setState({
-                        portfolios: [
-                            {portfolio_id: 1, portfolio_name: "401K"},
-                            {portfolio_id: 2, portfolio_name: "Roth"},
-                            {portfolio_id: 3, portfolio_name: "Taxable"}
-                        ]
-                    });
+                portfolios: [
+                    { portfolio_id: 1, portfolio_name: "401K" },
+                    { portfolio_id: 2, portfolio_name: "Roth" },
+                    { portfolio_id: 3, portfolio_name: "Taxable" }
+                ]
+            });
         }
         catch (err) {
             console.log(err);
@@ -37,6 +44,7 @@ export default class Portfolios extends React.Component {
     }
 
     componentDidMount() {
+        this.props.appState.onViewChange(false);
         this.updatePortfolios();
     }
 
@@ -59,19 +67,54 @@ export default class Portfolios extends React.Component {
         }
         else {
             return (<div>
-                <Link className="btn btn-primary btn-sm active mb-3" role="button" to={"#"}>Add Portfolio</Link>
-                <Table hover>
-                    <thead>
-                        <tr>
-                            <th>Portfolio</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {portfolioRows}
-                    </tbody>
-                </Table>
-                </div>)
+                <div className="accordion" id="portfolioAccordian">
+                    <Card>
+                        <CardHeader>
+                            <h2 className="mb-0">
+                                <Button className="btn btn-light btn-link" onClick={this.toggle}>
+                                    Create New Portfolio
+                            </Button>
+                            </h2>
+                        </CardHeader>
+                        <Collapse isOpen={this.state.showSection === false}>
+                            <CardBody>
+                                <div>
+                                    <InputGroup>
+                                        <Input placeholder="Portfolio Name" />
+                                        <InputGroupAddon addonType="append">
+                                            <Button>Create Portfolio</Button>
+                                        </InputGroupAddon>
+                                    </InputGroup>
+                                </div>
+                            </CardBody>
+                        </Collapse>
+                    </Card>
+                    <Card>
+                        <CardHeader>
+                            <h2 className="mb-0">
+                                <Button className="btn btn-light btn-link" onClick={this.toggle}>
+                                    Manage Portfolios
+                            </Button>
+                            </h2>
+                        </CardHeader>
+                        <Collapse isOpen={this.state.showSection === true}>
+                            <CardBody>
+                                <Table hover>
+                                    <thead>
+                                        <tr>
+                                            <th>Portfolio</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {portfolioRows}
+                                    </tbody>
+                                </Table>
+                            </CardBody>
+                        </Collapse>
+                    </Card>
+                </div>
+            </div >)
         }
     }
 }

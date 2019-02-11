@@ -58,8 +58,8 @@ export default class TickerDetail extends React.Component {
         if (this.props.ticker === "" || !this.state.isLoaded) { return null }
         else {
             return (
-                <div className="mt-3">
-                    <div className="card mt-3">
+                <div>
+                    <div className="card">
                         <div className="card-body">
                             <h1 className="card-title">{quoteResult.companyName}</h1>
                             <h4 className="card-subtitle mb-2 text-muted">Security Detail</h4>

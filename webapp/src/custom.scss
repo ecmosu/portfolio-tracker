@@ -61,3 +61,16 @@ $theme-colors: (
     95% {left: 120%;}
     to {left: 100%;}
 }
+
+table.portfolioTable td, table.portfolioTable th {
+  text-align: center;
+  vertical-align: middle;
+}
+
+table.portfolioTable td pre {
+  font: inherit;
+}
+
+table.portfolioTable td div {
+  height: 20px;
+}
