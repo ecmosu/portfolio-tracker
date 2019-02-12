@@ -62,15 +62,45 @@ $theme-colors: (
     to {left: 100%;}
 }
 
-table.portfolioTable td, table.portfolioTable th {
+span.icon-wrapper:hover {
+  cursor:pointer;
+ }
+
+table.portfolio-table td, table.portfolio-table th {
   text-align: center;
   vertical-align: middle;
 }
 
-table.portfolioTable td pre {
+table.portfolio-table td pre {
   font: inherit;
 }
 
-table.portfolioTable td div {
+table.portfolio-table td div {
   height: 20px;
+}
+
+tr.portfolio-holding-row td.holding-detail {
+  // min-width: 50px;
+  // width: 50px;
+  position: relative;
+}
+
+tr.portfolio-holding-row td.holding-detail div {
+  position: absolute;
+  margin-left: auto;
+  margin-right: auto;
+  left: 0;
+  right: 0;
+}
+
+tr.portfolio-holding-row td.holding-detail div.security-name {
+  width: 275px;
+  white-space: nowrap;
+  line-height: 1;
+  top: 10px;
+  text-align: left;
+  text-overflow: ellipsis;
+  overflow-x: hidden;
+  left: 20px;
+  right: initial;
 }

@@ -55,6 +55,7 @@ app.post('/login', async (req, res) => {
                 loggedIn: true,
                 user: username
             });
+            return;
         }
     }
     catch (err) {
@@ -97,6 +98,7 @@ app.post('/register', async (req, res) => {
     }
 });
 
+//Portfolios Endpoints
 app.get('/portfolios', async (req, res) => {
     try {
         if (req.session) {
@@ -106,12 +108,76 @@ app.get('/portfolios', async (req, res) => {
                 WHERE users.user_id = ?`;
             const results = await pool.query(sql, [userId]);
             res.send({ portfolios: results });
+            return;
         }
     }
     catch (err) {
         console.log(err);
     }
     res.send({ portfolios: [] });
-})
+});
+
+app.get('/portfolios/:id', async (req, res) => {
+    try {
+        if (req.session) {
+            const userId = req.session.userId;
+            const portfolioId = req.params.id;
+            const sql = `SELECT investments.investment_id, investments.symbol, investments.investment_name, 
+                investments.latest_closing_price as latest_price, investments.latest_closing_price, holdings.average_cost_basis, 
+                holdings.number_shares, holdings.date_updated 
+            FROM investments 
+                INNER JOIN holdings ON investments.investment_id = holdings.investment_id 
+                INNER JOIN portfolios ON holdings.portfolio_id =  portfolios.portfolio_id 
+            WHERE portfolios.user_id = ? AND portfolios.portfolio_id = ?`;
+            const results = await pool.query(sql, [userId, portfolioId]);
+            res.send({ holdings: results });
+            return;
+        }
+    }
+    catch (err) {
+        console.log(err);
+    }
+    res.send({ holdings: [] });
+});
+
+app.delete('/portfolios/:id', async (req, res) => {
+    try {
+        if (req.session) {
+            const userId = req.session.userId;
+            const portfolioId = req.params.id;
+            const sql = `DELETE FROM portfolios 
+                WHERE portfolio_id = ? AND user_id = ?`;
+            const results = await pool.query(sql, [portfolioId, userId]);
+            console.log(results);
+            res.send(true);
+            return;
+        }
+    }
+    catch (err) {
+        console.log(err);
+    }
+    res.send(false);
+});
+
+app.post('/portfolios/add', async (req, res) => {
+    try {
+        if (req.session) {
+            const userId = req.session.userId;
+            const portfolioName = req.body.name;
+            const sql = `INSERT INTO portfolios (user_id, portfolio_name) VALUES (?, ?)`;
+            const results = await pool.query(sql, [userId, portfolioName]);
+            console.log(results);
+            if(results.affectedRows > 0)
+            {
+                res.send({ portfolioId: results.insertId });
+                return;
+            }
+        }
+    }
+    catch (err) {
+        console.log(err);
+    }
+    res.send(false);
+});
 
 app.listen(PORT);

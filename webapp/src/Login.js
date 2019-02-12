@@ -6,7 +6,6 @@ import {
 export default class Login extends React.Component {
     constructor(props) {
         super(props);
-        this.handleLoginSubmit = this.handleLoginSubmit.bind(this);
         this.state = { inputUser: '', inputPass: '' }
     }
 
@@ -19,7 +18,7 @@ export default class Login extends React.Component {
         this.setState({ [name]: value })
     }
 
-    async handleLoginSubmit(event) {
+    handleLoginSubmit = async (event) => {
         event.preventDefault();
         this.props.appState.onLoadingChange(true);
         try {

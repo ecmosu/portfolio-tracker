@@ -1,16 +1,18 @@
 import React from 'react';
-import { IoIosTrendingUp, IoIosTrendingDown, IoIosClose, IoIosListBox, IoMdCreate } from 'react-icons/io';
+import { IoIosTrendingUp, IoIosTrendingDown, IoIosClose, IoIosAdd, IoIosListBox, IoMdCreate } from 'react-icons/io';
 import {
     Form, FormGroup, Button, Card, CardBody, CardHeader, Collapse,
     Input, Label, Table
 } from 'reactstrap';
 import TickerDetail from './TickerDetail';
+import io from 'socket.io-client';
+
+const url = 'https://ws-api.iextrading.com/1.0/last';
+const socket = io(url);
 
 export default class Portfolio extends React.Component {
     constructor(props) {
         super(props);
-        this.onTopToggle = this.onTopToggle.bind(this);
-        this.onSecuritySelect = this.onSecuritySelect.bind(this);
         this.state = {
             showSection: true,
             selectedSecurity: "",
@@ -23,16 +25,51 @@ export default class Portfolio extends React.Component {
 
     componentDidMount() {
         this.props.appState.onViewChange(false);
-        //this.updatePortfolios();
-        this.setState({
-            holdings: [
-                { investment_id: 1, investment_name: "SPDR Dow Jones Industrial Average", symbol: "DIA", latest_closing_price: 253.83, average_cost_basis: 88, number_shares: 100, date_updated: '02/06/2019' },
-                { investment_id: 2, investment_name: "SPDR S&P 500", symbol: "SPY", latest_closing_price: 272.795, average_cost_basis: 199, number_shares: 200, date_updated: '02/06/2019' }
-            ]
+        this.updateHoldings();
+        socket.on('message', (message) => {
+            try {
+                const detail = JSON.parse(message);
+                let holdings = [...this.state.holdings];
+                const holding = holdings.find(hld => hld.symbol === detail.symbol);
+                holding.latest_price = detail.price;
+                this.setState(holdings);
+                console.log(message);
+            }
+            catch { };
+            // let item = {...items[1]};
+            // item.name = 'newName';
+            // items[1] = item;
+
+            // this.setState({items});
+            //this.state.holdings.filter(holding => )
         });
+        socket.on('connect', () => {
+            socket.emit('subscribe', 'dia');
+            socket.emit('subscribe', 'spy');
+        });
+
     }
 
-    onTopToggle(e) {
+    updateHoldings = async () => {
+        try {
+            this.props.appState.onStatusMessageChange(false, '');
+            this.props.appState.onLoadingChange(true);
+            const response = await fetch(`./portfolios/${1}`);
+            if (response.status === 200) {
+                const json = await response.json();
+                this.setState({
+                    holdings: json.holdings
+                });
+            }
+            else { console.log('Update Portfolios - Invalid Server Response'); }
+        }
+        catch (err) {
+            console.log(err);
+        }
+        this.props.appState.onLoadingChange(false);
+    }
+
+    onTopToggle = (e) => {
         const toggleTarget = e.target.getAttribute("toggle-target")
         if (this.state.showSection === toggleTarget) {
             this.setState({ showSection: null });
@@ -42,20 +79,20 @@ export default class Portfolio extends React.Component {
         }
     }
 
-    onSecuritySelect(e) {
+    onSecuritySelect = (e) => {
         const symbol = e.currentTarget.getAttribute("symbol");
         this.setState({
             selectedSecurity: symbol
         })
     }
 
-    formatter(loc, settings) {
+    formatter = (loc, settings) => {
         return (number => {
             return new Intl.NumberFormat(loc, settings).format(number);
         });
     }
 
-    createColoredPercent(value) {
+    createColoredPercent = (value) => {
         if (value < 0) {
             return (<pre style={{ color: 'red' }}>{this.percentFormater(value)} <IoIosTrendingDown></IoIosTrendingDown></pre>)
         }
@@ -64,66 +101,67 @@ export default class Portfolio extends React.Component {
         }
     }
 
-    render() {
-        const { holdings } = this.state;
-        const holdingsRows = holdings.map((holding) => {
+    createHoldingsRows = () => {
+        return this.state.holdings.map((holding) => {
             return (
-                <tr key={holding.investment_id}>
-                    <td style={{ minWidth: '50px', width: '50px', position: 'relative' }}>
-                        <div style={{ width:'275px', whiteSpace: 'nowrap', position: 'absolute', top: '5px', overflowX: 'hidden' }}>
+                <tr key={holding.investment_id} className="portfolio-holding-row">
+                    <td className="holding-detail">
+                        <div className="security-name">
                             {holding.investment_name}
                         </div>
-                        <div style={{ position: 'absolute' }}>
+                        <div>
                             <pre>{holding.symbol}</pre>
                         </div>
                     </td>
-                    <td style={{ minWidth: '50px', width: '50px', position: 'relative' }}>
-                        <div style={{ position: 'absolute' }}>
+                    <td className="holding-detail">
+                        <div>
                             <pre>{this.decimalFormater(holding.number_shares)}</pre>
                         </div>
                     </td>
-                    <td style={{ minWidth: '50px', width: '50px', position: 'relative' }}>
-                        <div style={{ position: 'absolute' }}>
+                    <td className="holding-detail">
+                        <div>
                             <pre>{this.decimalFormater(holding.average_cost_basis)}</pre>
                         </div>
                     </td>
-                    <td style={{ minWidth: '50px', width: '50px', position: 'relative' }}>
-                        <div style={{ position: 'absolute' }}>
+                    <td className="holding-detail">
+                        <div>
                             <pre>{this.decimalFormater(holding.average_cost_basis * holding.number_shares)}</pre>
                         </div>
                     </td>
-                    <td style={{ minWidth: '70px', width: '70px' }}>
+                    <td>
                         <div>
-                            <IoMdCreate></IoMdCreate>
-                            <span> | </span>
-                            <IoIosClose></IoIosClose>
+                            <pre>
+                                <span className="icon-wrapper"><IoMdCreate></IoMdCreate></span>
+                                <span> | </span>
+                                <span className="icon-wrapper"><IoIosClose></IoIosClose></span>
+                            </pre>
                         </div>
                     </td>
-                    <td style={{ minWidth: '50px', width: '50px' }}>
+                    <td>
                         <div>
-                            <pre>Last Updated: {holding.date_updated}</pre>
+                            <pre>Last Updated: {new Intl.DateTimeFormat('en-US').format(new Date(holding.date_updated))}</pre>
                         </div>
                         <div>
-                            <pre>Last Closed: {holding.date_updated}</pre>
+                            <pre>Last Closed: {new Intl.DateTimeFormat('en-US').format(new Date(holding.date_updated))}</pre>
                         </div>
                     </td>
-                    <td style={{ minWidth: '100px', width: '100px' }}>
+                    <td>
                         <div>
-                            <pre>Current: {this.decimalFormater(holding.latest_closing_price)}</pre>
+                            <pre>Current: {this.decimalFormater(holding.latest_price)}</pre>
                         </div>
                         <div>
                             <pre>Closing: {this.decimalFormater(holding.latest_closing_price)}</pre>
                         </div>
                     </td>
-                    <td style={{ minWidth: '50px', width: '50px' }}>
+                    <td>
                         <div>
-                            <pre>{this.decimalFormater(holding.number_shares * holding.latest_closing_price)}</pre>
+                            <pre>{this.decimalFormater(holding.number_shares * holding.latest_price)}</pre>
                         </div>
                         <div>
                             <pre>{this.decimalFormater(holding.number_shares * holding.latest_closing_price)}</pre>
                         </div>
                     </td>
-                    <td style={{ minWidth: '50px', width: '50px' }}>
+                    <td>
                         <div>
                             {this.createColoredPercent(-.0181)}
                         </div>
@@ -131,146 +169,160 @@ export default class Portfolio extends React.Component {
                             {this.createColoredPercent(.0233)}
                         </div>
                     </td>
-                    <td style={{ textAlign: 'left', minWidth: '175px', width: '175px' }}>
+                    <td>
                         <div>
-                            <IoIosListBox onClick={this.onSecuritySelect} symbol={holding.symbol}></IoIosListBox>
+                            <pre>
+                                <span className="icon-wrapper">
+                                    <IoIosListBox onClick={this.onSecuritySelect} symbol={holding.symbol}></IoIosListBox>
+                                </span>
+                            </pre>
                         </div>
                     </td>
                 </tr>
             )
         });
+    }
 
-        const holdingsTotal = () => {
-            let total = { basis: 0, current: 0, closing: 0 };
-            holdings.map((holding) => {
-                total.basis += holding.average_cost_basis * holding.number_shares;
-                total.current += holding.latest_closing_price * holding.number_shares;
-                total.closing += holding.latest_closing_price * holding.number_shares;
-            });
-            return (<tr>
-                <td colSpan="3"></td>
-                <td>
-                    <div>{this.decimalFormater(total.basis)}</div>
-                </td>
-                <td colSpan="2"></td>
-                <td style={{ minWidth: '100px', width: '100px' }}>
-                    <div>
-                        <pre>Current: </pre>
-                    </div>
-                    <div>
-                        <pre>Closing: </pre>
-                    </div>
-                </td>
-                <td style={{ minWidth: '50px', width: '50px' }}>
-                    <div>
-                        <pre>{this.decimalFormater(total.current)}</pre>
-                    </div>
-                    <div>
-                        <pre>{this.decimalFormater(total.closing)}</pre>
-                    </div>
-                </td>
-                <td style={{ minWidth: '50px', width: '50px' }}>
-                    <div>
-                        {this.createColoredPercent(-.0181)}
-                    </div>
-                    <div>
-                        {this.createColoredPercent(.0233)}
-                    </div>
-                </td>
-            </tr>);
-        }
+    createHoldingsTotal = () => {
+        let total = { basis: 0, current: 0, closing: 0 };
+        this.state.holdings.forEach((holding) => {
+            total.basis += holding.average_cost_basis * holding.number_shares;
+            total.current += holding.latest_price * holding.number_shares;
+            total.closing += holding.latest_closing_price * holding.number_shares;
+        });
+        return (<tr>
+            <td colSpan="3"></td>
+            <td>
+                <div>{this.decimalFormater(total.basis)}</div>
+            </td>
+            <td colSpan="2"></td>
+            <td style={{ minWidth: '100px', width: '100px' }}>
+                <div>
+                    <pre>Current: </pre>
+                </div>
+                <div>
+                    <pre>Closing: </pre>
+                </div>
+            </td>
+            <td style={{ minWidth: '50px', width: '50px' }}>
+                <div>
+                    <pre>{this.decimalFormater(total.current)}</pre>
+                </div>
+                <div>
+                    <pre>{this.decimalFormater(total.closing)}</pre>
+                </div>
+            </td>
+            <td style={{ minWidth: '50px', width: '50px' }}>
+                <div>
+                    {this.createColoredPercent(-.0181)}
+                </div>
+                <div>
+                    {this.createColoredPercent(.0233)}
+                </div>
+            </td>
+        </tr>);
+    }
 
-        if (holdingsRows.length === 0) {
+    renderAddInvestmentSection = () => {
+        return (<Card>
+            <CardHeader>
+                <h2 className="mb-0">
+                    <span onClick={this.onTopToggle} toggle-target="Manage" className="btn btn-link" style={{ width: '100%', textAlign: 'left' }}>
+                        Add Investment
+                    </span>
+                </h2>
+            </CardHeader>
+            <Collapse isOpen={this.state.showSection === "Manage"}>
+                <CardBody>
+                    <div>
+                        <Form inline>
+                            <FormGroup className="mb-2 mr-sm-2 mb-sm-0">
+                                <Label for="addTicker" className="mr-sm-2">Ticker</Label>
+                                <Input type="text" name="ticker" id="addTicker" placeholder="Ticker" required />
+                            </FormGroup>
+                            <FormGroup className="mb-2 mr-sm-2 mb-sm-0">
+                                <Label for="addShares" className="mr-sm-2">Shares</Label>
+                                <Input type="number" step="any" name="shares" id="addShares" placeholder="# of Shares" required />
+                            </FormGroup>
+                            <FormGroup className="mb-2 mr-sm-2 mb-sm-0">
+                                <Label for="addBasis" className="mr-sm-2">Avg. Stock Basis</Label>
+                                <Input type="number" step="any" name="basis" id="addBasis" placeholder="Basis" required />
+                            </FormGroup>
+                            <Button color="primary">Submit</Button>
+                        </Form>
+                    </div>
+                </CardBody>
+            </Collapse>
+        </Card>);
+    }
+
+    renderManageManualInvestment = () => {
+        return (<Card>
+            <CardHeader>
+                <h2 className="mb-0">
+                    <span onClick={this.onTopToggle} toggle-target="Add" className="btn btn-link" style={{ width: '100%', textAlign: 'left' }}>
+                        Manage Manual Investments
+                    </span>
+                </h2>
+            </CardHeader>
+            <Collapse isOpen={this.state.showSection === "Add"}>
+                <CardBody>
+                    <div>
+                        <Table responsive hover>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Current Price</th>
+                                    <th>Date Updated</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Manual Investment #1</td>
+                                    <td>101.23</td>
+                                    <td>02/06/2019</td>
+                                    <td>
+                                        <span className="icon-wrapper"><IoIosAdd></IoIosAdd></span>
+                                        <span> | </span>
+                                        <span className="icon-wrapper"><IoMdCreate></IoMdCreate></span>
+                                        <span> | </span>
+                                        <span className="icon-wrapper"><IoIosClose></IoIosClose></span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Hedge Fund Holding #1</td>
+                                    <td>1023.24</td>
+                                    <td>02/06/2019</td>
+                                    <td>
+                                        <span className="icon-wrapper"><IoIosAdd></IoIosAdd></span>
+                                        <span> | </span>
+                                        <span className="icon-wrapper"><IoMdCreate></IoMdCreate></span>
+                                        <span> | </span>
+                                        <span className="icon-wrapper"><IoIosClose></IoIosClose></span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </Table>
+                    </div>
+                </CardBody>
+            </Collapse>
+        </Card>);
+    }
+
+    render() {
+        if (this.state.holdings.length === 0) {
             return (<div>No holdings have been added to this portfolio.</div>)
         }
         else {
             return (
                 <div>
                     <div className="accordion mt-3 pb-3" id="portfolioAccordian">
-                        <Card>
-                            <CardHeader>
-                                <h2 className="mb-0">
-                                    <Button className="btn btn-light btn-link" onClick={this.onTopToggle} toggle-target="Manage">
-                                        Add Investment
-                                    </Button>
-                                </h2>
-                            </CardHeader>
-                            <Collapse isOpen={this.state.showSection === "Manage"}>
-                                <CardBody>
-                                    <div>
-                                        <Form inline>
-                                            <FormGroup className="mb-2 mr-sm-2 mb-sm-0">
-                                                <Label for="addTicker" className="mr-sm-2">Ticker</Label>
-                                                <Input type="text" name="ticker" id="addTicker" placeholder="Ticker" required />
-                                            </FormGroup>
-                                            <FormGroup className="mb-2 mr-sm-2 mb-sm-0">
-                                                <Label for="addShares" className="mr-sm-2">Shares</Label>
-                                                <Input type="number" step="any" name="shares" id="addShares" placeholder="# of Shares" required />
-                                            </FormGroup>
-                                            <FormGroup className="mb-2 mr-sm-2 mb-sm-0">
-                                                <Label for="addBasis" className="mr-sm-2">Avg. Stock Basis</Label>
-                                                <Input type="number" step="any" name="basis" id="addBasis" placeholder="Basis" required />
-                                            </FormGroup>
-                                            <Button>Submit</Button>
-                                        </Form>
-                                    </div>
-                                </CardBody>
-                            </Collapse>
-                        </Card>
-                        <Card>
-                            <CardHeader>
-                                <h2 className="mb-0">
-                                    <Button className="btn btn-light btn-link" onClick={this.onTopToggle} toggle-target="Add">
-                                        Manage Manual Investments
-                                    </Button>
-                                </h2>
-                            </CardHeader>
-                            <Collapse isOpen={this.state.showSection === "Add"}>
-                                <CardBody>
-                                    <div>
-                                        <Table responsive hover>
-                                            <thead>
-                                                <tr>
-                                                    <th>Name</th>
-                                                    <th>Current Price</th>
-                                                    <th>Date Updated</th>
-                                                    <th></th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr>
-                                                    <td>Manual Investment #1</td>
-                                                    <td>101.23</td>
-                                                    <td>02/06/2019</td>
-                                                    <td>
-                                                        <Button color="primary" size="sm">Add</Button>
-                                                        <span> | </span>
-                                                        <Button color="primary" size="sm">Edit</Button>
-                                                        <span> | </span>
-                                                        <Button color="primary" size="sm">Delete</Button>
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td>Hedge Fund Holding #1</td>
-                                                    <td>1023.24</td>
-                                                    <td>02/06/2019</td>
-                                                    <td>
-                                                        <Button color="primary" size="sm">Add</Button>
-                                                        <span> | </span>
-                                                        <Button color="primary" size="sm">Edit</Button>
-                                                        <span> | </span>
-                                                        <Button color="primary" size="sm">Delete</Button>
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </Table>
-                                    </div>
-                                </CardBody>
-                            </Collapse>
-                        </Card>
+                        {this.renderAddInvestmentSection()}
+                        {this.renderManageManualInvestment()}
                     </div>
                     <TickerDetail {...this.props} ticker={this.state.selectedSecurity}></TickerDetail>
-                    <Table className="mt-3 portfolioTable" hover responsive>
+                    <Table className="mt-3 portfolio-table" hover responsive>
                         <thead>
                             <tr>
                                 <th>Ticker</th>
@@ -286,8 +338,8 @@ export default class Portfolio extends React.Component {
                             </tr>
                         </thead>
                         <tbody>
-                            {holdingsRows}
-                            {holdingsTotal()}
+                            {this.createHoldingsRows()}
+                            {this.createHoldingsTotal()}
                         </tbody>
                     </Table>
                 </div>)

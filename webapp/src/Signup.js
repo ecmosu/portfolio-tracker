@@ -6,10 +6,9 @@ import {
 export default class Signup extends React.Component {
     constructor(props) {
         super(props);
-        this.handleSignupSubmit = this.handleSignupSubmit.bind(this);
         this.state = { inputUser: '', inputPass: '' }
     }
-    
+
     componentDidMount() {
         this.props.appState.onViewChange(false);
     }
@@ -19,7 +18,7 @@ export default class Signup extends React.Component {
         this.setState({ [name]: value })
     }
 
-    async handleSignupSubmit(event) {
+    handleSignupSubmit = async (event) => {
         event.preventDefault();
         this.props.appState.onLoadingChange(true);
         try {

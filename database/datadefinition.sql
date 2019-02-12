@@ -57,7 +57,7 @@ CREATE TABLE `holdings` (
   `number_shares` DECIMAL(12, 5) DEFAULT 0,
   `date_updated` TIMESTAMP on update CURRENT_TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
   PRIMARY KEY (`portfolio_id`, `investment_id`),
-  CONSTRAINT `holdings_ibfk_1` FOREIGN KEY (`portfolio_id`) REFERENCES `portfolios` (`portfolio_id`),
+  CONSTRAINT `holdings_ibfk_1` FOREIGN KEY (`portfolio_id`) REFERENCES `portfolios` (`portfolio_id`) ON DELETE CASCADE,
   CONSTRAINT `holdings_ibfk_2` FOREIGN KEY (`investment_id`) REFERENCES `investments` (`investment_id`)
 ) ENGINE = InnoDB;
 

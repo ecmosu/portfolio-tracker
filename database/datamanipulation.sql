@@ -11,7 +11,7 @@ UPDATE users SET last_login = NOW() WHERE user_id = :user_id
 INSERT INTO portfolios (user_id, portfolio_name) VALUES (:user_id, :portfolioNameInput);
 
 -- Update Portfolio
-UPDATE portfolios SET portfolio_name = 'BOO'
+UPDATE portfolios SET portfolio_name = :new_portfolio_name
     WHERE portfolio_id = :portfolio_id AND user_id = :user_id;
 
 -- View('Select') portfolio
@@ -22,8 +22,7 @@ FROM investments
 WHERE portfolios.user_id = :user_id AND portfolios.portfolio_id = :portfolio_id;
 
 -- Delete portfolio
-DELETE FROM holdings WHERE portfolio_id = :portfolio_id;
-DELETE FROM portfolios WHERE portfolio_id = :portfolio_id;
+DELETE FROM portfolios WHERE portfolio_id = :portfolio_id AND user_id = :user_id;
 
 -- Delete individual holding
 DELETE FROM holdings WHERE portfolio_id = :portfolio_id AND investment_id = :investment_id
