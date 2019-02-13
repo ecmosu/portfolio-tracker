@@ -7,12 +7,13 @@ import {
 import TickerDetail from './TickerDetail';
 import io from 'socket.io-client';
 
-const url = 'https://ws-api.iextrading.com/1.0/last';
-const socket = io(url);
-
 export default class Portfolio extends React.Component {
     constructor(props) {
         super(props);
+        this.socket = io('https://ws-api.iextrading.com/1.0/last', {
+            autoConnect: false
+        });
+
         this.state = {
             showSection: true,
             selectedSecurity: "",
@@ -23,31 +24,38 @@ export default class Portfolio extends React.Component {
         this.percentFormater = this.formatter('en-US', { style: "percent", maximumFractionDigits: 2 });
     }
 
+    componentWillUnmount() {
+        this.socket.close();
+    }
+
     componentDidMount() {
         this.props.appState.onViewChange(false);
         this.updateHoldings();
-        socket.on('message', (message) => {
+        this.socket.open();
+        this.socket.on('connect', () => {
+            this.state.holdings.forEach(item => {
+                this.socket.emit('subscribe', item.symbol);
+            });
+            console.log('Connected');
+        });
+
+        this.socket.on('disconnect', function () {
+            console.log('user disconnected');
+        });
+
+        this.socket.on('message', (message) => {
             try {
                 const detail = JSON.parse(message);
                 let holdings = [...this.state.holdings];
                 const holding = holdings.find(hld => hld.symbol === detail.symbol);
-                holding.latest_price = detail.price;
-                this.setState(holdings);
-                console.log(message);
+                const holdingPriceTime = new Date(holding.price_date).getTime();
+                if (holdingPriceTime < detail.time) {
+                    holding.latest_price = detail.price;
+                    this.setState(holdings);
+                }
             }
             catch { };
-            // let item = {...items[1]};
-            // item.name = 'newName';
-            // items[1] = item;
-
-            // this.setState({items});
-            //this.state.holdings.filter(holding => )
         });
-        socket.on('connect', () => {
-            socket.emit('subscribe', 'dia');
-            socket.emit('subscribe', 'spy');
-        });
-
     }
 
     updateHoldings = async () => {
@@ -96,13 +104,20 @@ export default class Portfolio extends React.Component {
         if (value < 0) {
             return (<pre style={{ color: 'red' }}>{this.percentFormater(value)} <IoIosTrendingDown></IoIosTrendingDown></pre>)
         }
-        else {
+        else if (value > 0) {
             return (<pre style={{ color: 'green' }}>{this.percentFormater(value)} <IoIosTrendingUp></IoIosTrendingUp></pre>)
+        }
+        else {
+            return (<pre style={{ color: 'black' }}>{this.percentFormater(value)}</pre>)
         }
     }
 
     createHoldingsRows = () => {
         return this.state.holdings.map((holding) => {
+            const totalBasis = holding.average_cost_basis * holding.number_shares;
+            const latestPrice = holding.number_shares * holding.latest_price;
+            const latestClosingPrice = holding.number_shares * holding.latest_closing_price;
+
             return (
                 <tr key={holding.investment_id} className="portfolio-holding-row">
                     <td className="holding-detail">
@@ -125,7 +140,15 @@ export default class Portfolio extends React.Component {
                     </td>
                     <td className="holding-detail">
                         <div>
-                            <pre>{this.decimalFormater(holding.average_cost_basis * holding.number_shares)}</pre>
+                            <pre>{this.decimalFormater(totalBasis)}</pre>
+                        </div>
+                    </td>
+                    <td>
+                        <div>
+                            <pre>Last Updated: {new Intl.DateTimeFormat('en-US').format(new Date(holding.date_updated))}</pre>
+                        </div>
+                        <div>
+                            <pre>Last Closed: {new Intl.DateTimeFormat('en-US').format(new Date(holding.price_date))}</pre>
                         </div>
                     </td>
                     <td>
@@ -139,14 +162,6 @@ export default class Portfolio extends React.Component {
                     </td>
                     <td>
                         <div>
-                            <pre>Last Updated: {new Intl.DateTimeFormat('en-US').format(new Date(holding.date_updated))}</pre>
-                        </div>
-                        <div>
-                            <pre>Last Closed: {new Intl.DateTimeFormat('en-US').format(new Date(holding.date_updated))}</pre>
-                        </div>
-                    </td>
-                    <td>
-                        <div>
                             <pre>Current: {this.decimalFormater(holding.latest_price)}</pre>
                         </div>
                         <div>
@@ -155,18 +170,18 @@ export default class Portfolio extends React.Component {
                     </td>
                     <td>
                         <div>
-                            <pre>{this.decimalFormater(holding.number_shares * holding.latest_price)}</pre>
+                            <pre>{this.decimalFormater(latestPrice)}</pre>
                         </div>
                         <div>
-                            <pre>{this.decimalFormater(holding.number_shares * holding.latest_closing_price)}</pre>
+                            <pre>{this.decimalFormater(latestClosingPrice)}</pre>
                         </div>
                     </td>
                     <td>
                         <div>
-                            {this.createColoredPercent(-.0181)}
+                            {this.createColoredPercent((latestPrice - latestClosingPrice) / latestClosingPrice)}
                         </div>
                         <div>
-                            {this.createColoredPercent(.0233)}
+                            {this.createColoredPercent((latestClosingPrice - totalBasis) / totalBasis)}
                         </div>
                     </td>
                     <td>
@@ -329,8 +344,8 @@ export default class Portfolio extends React.Component {
                                 <th>Shares</th>
                                 <th>Basis</th>
                                 <th>Total Basis</th>
-                                <th></th>
                                 <th>Date</th>
+                                <th></th>
                                 <th>Price</th>
                                 <th>Total</th>
                                 <th>Gain/Loss</th>

@@ -41,6 +41,7 @@ CREATE TABLE `investments` (
   `symbol` VARCHAR(50) DEFAULT NULL,
   `investment_name` VARCHAR(250) NOT NULL,
   `latest_closing_price` DECIMAL(9, 2) DEFAULT 0,
+  `price_date` TIMESTAMP NOT NULL,
   `investmenttype_id` INT(11) NOT NULL, 
   `sector_id` INT(11) DEFAULT NULL, 
   `user_id` INT(11) DEFAULT NULL, 
@@ -73,10 +74,10 @@ INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('SI', 'SI');
 INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('LP', 'LP');
 INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('CS', 'CS');
 INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('ET', 'ETF');
-INSERT INTO investments (symbol, investment_name, investmenttype_id, latest_closing_price, sector_id)
-  VALUES ('DIA', 'SPDR Dow Jones Industrial Average', 7, 251.32, 1);
-INSERT INTO investments (symbol, investment_name, investmenttype_id, latest_closing_price, sector_id)
-  VALUES ('SPY', 'SPDR S&P 500', 7, 270.47, 1);
+INSERT INTO investments (symbol, investment_name, investmenttype_id, latest_closing_price, price_date, sector_id)
+  VALUES ('DIA', 'SPDR Dow Jones Industrial Average', 7, 251.32, NOW() - INTERVAL 7 DAY, 1);
+INSERT INTO investments (symbol, investment_name, investmenttype_id, latest_closing_price, price_date, sector_id)
+  VALUES ('SPY', 'SPDR S&P 500', 7, 251.32, NOW() - INTERVAL 7 DAY, 1);
 INSERT INTO holdings (portfolio_id, investment_id, average_cost_basis, date_updated, number_shares)
   VALUES (1, 1, 88, NOW(), 100);
 INSERT INTO holdings (portfolio_id, investment_id, average_cost_basis, date_updated, number_shares)

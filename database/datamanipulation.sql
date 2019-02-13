@@ -12,13 +12,15 @@ INSERT INTO portfolios (user_id, portfolio_name) VALUES (:user_id, :portfolioNam
 
 -- Update Portfolio
 UPDATE portfolios SET portfolio_name = :new_portfolio_name
-    WHERE portfolio_id = :portfolio_id AND user_id = :user_id;
+  WHERE portfolio_id = :portfolio_id AND user_id = :user_id;
 
 -- View('Select') portfolio
-SELECT investments.symbol, investments.investment_name, investments.latest_closing_price, holdings.average_cost_basis, holdings.number_shares, holdings.date_updated 
+SELECT SELECT investments.investment_id, investments.symbol, investments.investment_name, 
+  investments.latest_closing_price as latest_price, investments.latest_closing_price, holdings.average_cost_basis, 
+  holdings.number_shares, investments.price_date, holdings.date_updated
 FROM investments 
-    INNER JOIN holdings ON investments.investment_id = holdings.investment_id 
-    INNER JOIN portfolios ON holdings.portfolio_id =  portfolios.portfolio_id 
+  INNER JOIN holdings ON investments.investment_id = holdings.investment_id 
+  INNER JOIN portfolios ON holdings.portfolio_id =  portfolios.portfolio_id 
 WHERE portfolios.user_id = :user_id AND portfolios.portfolio_id = :portfolio_id;
 
 -- Delete portfolio
@@ -39,8 +41,8 @@ INSERT INTO investments (symbol, investment_name, investmenttype_id, latest_clos
 
 --Update Investment Price
 UPDATE investments
-SET latest_closing_price = :latest_closing_price
-WHERE investment_id = :investment_id;
+  SET latest_closing_price = :latest_closing_price
+  WHERE investment_id = :investment_id;
 
 --Delete Investment
 DELETE FROM holdings WHERE WHERE investment_id = :investment_id;
@@ -49,8 +51,8 @@ DELETE FROM investments WHERE investment_id = :investment_id AND user_id = :user
 --Update Holding
 UPDATE holdings 
 SET average_cost_basis = :average_cost_basis, 
-    number_shares = :number_shares,
-    date_updated = NOW()
+  number_shares = :number_shares,
+  date_updated = NOW()
 WHERE portfolio_id = :portfolio_id AND investment_id = :investment_id;
 
 --Create New Holding
