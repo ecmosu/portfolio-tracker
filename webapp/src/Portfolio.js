@@ -1,10 +1,11 @@
 import React from 'react';
-import { IoIosTrendingUp, IoIosTrendingDown, IoIosClose, IoIosAdd, IoIosListBox, IoMdCreate } from 'react-icons/io';
+import { IoIosTrendingUp, IoIosListBox, IoIosTrendingDown, IoIosClose, IoIosAdd, IoMdCreate } from 'react-icons/io';
 import {
     Form, FormGroup, Button, Card, CardBody, CardHeader, Collapse,
     Input, Label, Table
 } from 'reactstrap';
 import TickerDetail from './TickerDetail';
+import PortfolioEntry from './PortfolioEntry';
 import io from 'socket.io-client';
 
 export default class Portfolio extends React.Component {
@@ -13,6 +14,8 @@ export default class Portfolio extends React.Component {
         this.socket = io('https://ws-api.iextrading.com/1.0/last', {
             autoConnect: false
         });
+
+        this.currentPricingDetail = {};
 
         this.state = {
             showSection: true,
@@ -30,12 +33,22 @@ export default class Portfolio extends React.Component {
 
     componentDidMount() {
         this.props.appState.onViewChange(false);
-        this.updateHoldings();
+        //this.updateHoldings();
+        this.setState({
+            holdings: [
+                { investment_id: 1, investment_name: "DOW", symbol: "DIA", latest_closing_price: 253.83, latest_price: 253.83, average_cost_basis: 88, number_shares: 100, date_updated: '02/06/2019', price_date: '02/06/2019' },
+                { investment_id: 2, investment_name: "S&P 500", symbol: "SPY", latest_closing_price: 272.795, latest_price: 272.795, average_cost_basis: 199, number_shares: 200, date_updated: '02/06/2019', price_date: '02/06/2019' }
+            ]
+        });
         this.socket.open();
         this.socket.on('connect', () => {
+            this.currentPricingDetail["currentState"] = { updated: Date.now() };
             this.state.holdings.forEach(item => {
+                this.currentPricingDetail[item.symbol] = { price: item.latest_price };
                 this.socket.emit('subscribe', item.symbol);
             });
+
+            //setInterval(this.updateCurrentPrices, 2000);
             console.log('Connected');
         });
 
@@ -46,16 +59,36 @@ export default class Portfolio extends React.Component {
         this.socket.on('message', (message) => {
             try {
                 const detail = JSON.parse(message);
-                let holdings = [...this.state.holdings];
-                const holding = holdings.find(hld => hld.symbol === detail.symbol);
-                const holdingPriceTime = new Date(holding.price_date).getTime();
-                if (holdingPriceTime < detail.time) {
+                //this.currentPricingDetail[detail.symbol] = { price: detail.price };
+
+                const holdings = [...this.state.holdings];
+                const holdingIndex = holdings.findIndex(item => item.symbol === detail.symbol);
+                let holding = { ...holdings[holdingIndex] };
+                //const currentHolding = this.currentPricingDetail[holding.symbol];
+                //const holdingPriceTime = new Date(holding.price_date).getTime();
+                //if (holdingPriceTime < detail.time) {
                     holding.latest_price = detail.price;
-                    this.setState(holdings);
-                }
+                    holdings[holdingIndex] = holding;
+                    this.setState( { holdings });
+                //}
             }
-            catch { };
+            catch(err) {
+                console.log(err);
+             };
         });
+    }
+
+    updateCurrentPrices = async () => {
+        let holdings = [...this.state.holdings];
+        holdings.forEach((element, holdingIndex) => {
+            let holding = { ...holdings[holdingIndex] };
+            const currentHolding = this.currentPricingDetail[holding.symbol];
+            if (currentHolding !== null) {
+                holding.latest_price = this.currentPricingDetail[holding.symbol].price;
+                holdings[holdingIndex] = holding;
+            }
+        });
+        this.setState({ holdings });
     }
 
     updateHoldings = async () => {
@@ -114,87 +147,7 @@ export default class Portfolio extends React.Component {
 
     createHoldingsRows = () => {
         return this.state.holdings.map((holding) => {
-            const totalBasis = holding.average_cost_basis * holding.number_shares;
-            const latestPrice = holding.number_shares * holding.latest_price;
-            const latestClosingPrice = holding.number_shares * holding.latest_closing_price;
-
-            return (
-                <tr key={holding.investment_id} className="portfolio-holding-row">
-                    <td className="holding-detail">
-                        <div className="security-name">
-                            {holding.investment_name}
-                        </div>
-                        <div>
-                            <pre>{holding.symbol}</pre>
-                        </div>
-                    </td>
-                    <td className="holding-detail">
-                        <div>
-                            <pre>{this.decimalFormater(holding.number_shares)}</pre>
-                        </div>
-                    </td>
-                    <td className="holding-detail">
-                        <div>
-                            <pre>{this.decimalFormater(holding.average_cost_basis)}</pre>
-                        </div>
-                    </td>
-                    <td className="holding-detail">
-                        <div>
-                            <pre>{this.decimalFormater(totalBasis)}</pre>
-                        </div>
-                    </td>
-                    <td>
-                        <div>
-                            <pre>Last Updated: {new Intl.DateTimeFormat('en-US').format(new Date(holding.date_updated))}</pre>
-                        </div>
-                        <div>
-                            <pre>Last Closed: {new Intl.DateTimeFormat('en-US').format(new Date(holding.price_date))}</pre>
-                        </div>
-                    </td>
-                    <td>
-                        <div>
-                            <pre>
-                                <span className="icon-wrapper"><IoMdCreate></IoMdCreate></span>
-                                <span> | </span>
-                                <span className="icon-wrapper"><IoIosClose></IoIosClose></span>
-                            </pre>
-                        </div>
-                    </td>
-                    <td>
-                        <div>
-                            <pre>Current: {this.decimalFormater(holding.latest_price)}</pre>
-                        </div>
-                        <div>
-                            <pre>Closing: {this.decimalFormater(holding.latest_closing_price)}</pre>
-                        </div>
-                    </td>
-                    <td>
-                        <div>
-                            <pre>{this.decimalFormater(latestPrice)}</pre>
-                        </div>
-                        <div>
-                            <pre>{this.decimalFormater(latestClosingPrice)}</pre>
-                        </div>
-                    </td>
-                    <td>
-                        <div>
-                            {this.createColoredPercent((latestPrice - latestClosingPrice) / latestClosingPrice)}
-                        </div>
-                        <div>
-                            {this.createColoredPercent((latestClosingPrice - totalBasis) / totalBasis)}
-                        </div>
-                    </td>
-                    <td>
-                        <div>
-                            <pre>
-                                <span className="icon-wrapper">
-                                    <IoIosListBox onClick={this.onSecuritySelect} symbol={holding.symbol}></IoIosListBox>
-                                </span>
-                            </pre>
-                        </div>
-                    </td>
-                </tr>
-            )
+            return <PortfolioEntry key={holding.investment_id} onSecuritySelect={this.onSecuritySelect} {...holding}></PortfolioEntry>
         });
     }
 
@@ -337,6 +290,9 @@ export default class Portfolio extends React.Component {
                         {this.renderManageManualInvestment()}
                     </div>
                     <TickerDetail {...this.props} ticker={this.state.selectedSecurity}></TickerDetail>
+                    <div className={"mt-2"}>
+                        <pre>Actions: <IoMdCreate></IoMdCreate> - Edit || <IoIosClose></IoIosClose> - Delete || <IoIosListBox></IoIosListBox> - Show Details</pre>
+                    </div>
                     <Table className="mt-3 portfolio-table" hover responsive>
                         <thead>
                             <tr>

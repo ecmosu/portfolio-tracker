@@ -28,7 +28,7 @@ export default class Pages extends React.Component {
                     <dt className="col-sm-3">
                         <Link to={"./signup"}>Login</Link>
                     </dt>
-                    <dd className="col-sm-9">This page will allow a user to login to the service.</dd>
+                    <dd className="col-sm-9">This page will allow a user to login to the service.  For demo and testing purposes, a "TestUser" account has been setup.  You can log into this account using "TestUser" as the username and password.</dd>
                 </dl>
             </div>
         </div>

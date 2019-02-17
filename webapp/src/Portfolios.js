@@ -10,7 +10,7 @@ export default class Portfolios extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            showSection: true,
+            showSection: "Manage",
             portfolioName: "",
             portfolioSearch: "",
             portfolios: []
@@ -31,14 +31,21 @@ export default class Portfolios extends React.Component {
         try {
             this.props.appState.onStatusMessageChange(false, '');
             this.props.appState.onLoadingChange(true);
-            const response = await fetch(`./portfolios`);
-            if (response.status === 200) {
-                const json = await response.json();
-                this.setState({
-                    portfolios: json.portfolios
-                });
-            }
-            else { console.log('Update Portfolios - Invalid Server Response'); }
+            // const response = await fetch(`./portfolios`);
+            // if (response.status === 200) {
+            //     const json = await response.json();
+            //     this.setState({
+            //         portfolios: json.portfolios
+            //     });
+            // }
+            // else { console.log('Update Portfolios - Invalid Server Response'); }
+            this.setState({
+                portfolios: [
+                    { portfolio_id: 1, portfolio_name: "401K" },
+                    { portfolio_id: 2, portfolio_name: "Roth" },
+                    { portfolio_id: 3, portfolio_name: "Taxable" }
+                ]
+            });
         }
         catch (err) {
             console.log(err);
@@ -102,7 +109,7 @@ export default class Portfolios extends React.Component {
     }
 
     updateSearch(e) {
-        this.setState({portfolioSearch: e.target.value.substr(0, 20)});
+        this.setState({ portfolioSearch: e.target.value.substr(0, 20) });
     }
 
     componentDidMount() {
@@ -131,7 +138,7 @@ export default class Portfolios extends React.Component {
     }
 
     renderCreatePortfolioSection = () => {
-        return(<Card>
+        return (<Card>
             <CardHeader>
                 <h2 className="mb-0">
                     <span onClick={this.toggle} toggle-target="Create" className="btn btn-link" style={{ width: '100%', textAlign: 'left' }}>
@@ -177,18 +184,21 @@ export default class Portfolios extends React.Component {
             </CardHeader>
             <Collapse isOpen={this.state.showSection === "Manage"}>
                 <CardBody>
-                    <div>
-                    <Form inline>
-                        <FormGroup className="mb-2 mr-sm-2 mb-sm-0">
-                            <Label for="exampleEmail" className="mr-sm-2">Portfolio Search</Label>
+                    <div className="mb-2">
+                        <Form inline>
+                            <FormGroup className="mb-2 mr-sm-2 mb-sm-0">
+                                <Label for="exampleEmail" className="mr-sm-2">Portfolio Search</Label>
                                 <Input required type="text"
                                     name="portfolioSearch"
                                     id="portfolio-search"
                                     onChange={this.updateSearch.bind(this)}
                                     value={this.state.portfolioSearch}
                                     placeholder="Portfolio Name" />
-                        </FormGroup>
-                    </Form>
+                            </FormGroup>
+                        </Form>
+                    </div>
+                    <div>
+                        <pre>Actions: <IoIosListBox></IoIosListBox> - Select || <IoIosClose></IoIosClose> - Delete</pre>
                     </div>
                     <Table hover>
                         <thead>

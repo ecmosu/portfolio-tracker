@@ -7,3 +7,4 @@ webapi/node_modules/
 .ebextensions
 .elasticbeanstalk
 deploy
+database/testingSecurities.sql
