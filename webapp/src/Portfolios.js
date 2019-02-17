@@ -1,7 +1,7 @@
 import React from 'react';
 import {
     Button, Card, CardBody, CardHeader, Collapse,
-    Form, FormGroup, Input, Label, Table
+    Form, FormGroup, Input, Label, Table, Alert
 } from 'reactstrap';
 import { Link } from 'react-router-dom'
 import { IoIosClose, IoIosListBox } from 'react-icons/io';
@@ -166,6 +166,7 @@ export default class Portfolios extends React.Component {
                 return portfolio.portfolio_name.toLowerCase().indexOf(this.state.portfolioSearch) !== -1;
             }
         );
+        const portfolioRows = this.createPortfolioRows(filteredPortfolios);
         return (<Card>
             <CardHeader>
                 <h2 className="mb-0">
@@ -187,7 +188,6 @@ export default class Portfolios extends React.Component {
                                     value={this.state.portfolioSearch}
                                     placeholder="Portfolio Name" />
                         </FormGroup>
-                        <Button color="primary">Search</Button>
                     </Form>
                     </div>
                     <Table hover>
@@ -198,19 +198,7 @@ export default class Portfolios extends React.Component {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredPortfolios.map((portfolio) => {
-                                return (
-                                    <tr key={portfolio.portfolio_id}>
-                                    <td>{portfolio.portfolio_name}</td>
-                                    <td>
-                
-                                        <Link to={"/portfolios/" + portfolio.portfolio_id}><IoIosListBox></IoIosListBox></Link>
-                                        <span> |  </span>
-                                        <span className="icon-wrapper" onClick={this.deletePortfolio} data-id={portfolio.portfolio_id}><IoIosClose></IoIosClose></span>
-                                    </td>
-                                </tr>
-                                );
-                            })}
+                            {portfolioRows}
                         </tbody>
                     </Table>
                 </CardBody>
