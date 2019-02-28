@@ -2,7 +2,7 @@ import React from 'react';
 import { IoIosTrendingUp, IoIosListBox, IoIosTrendingDown, IoIosClose, IoIosAdd, IoMdCreate } from 'react-icons/io';
 import {
     Form, FormGroup, Button, Card, CardBody, CardHeader, Collapse,
-    Input, Label, Table
+    Input, Label, Table, Modal, ModalHeader, ModalBody, ModalFooter
 } from 'reactstrap';
 import TickerDetail from './TickerDetail';
 import PortfolioEntry from './PortfolioEntry';
@@ -20,7 +20,9 @@ export default class Portfolio extends React.Component {
         this.state = {
             showSection: true,
             selectedSecurity: "",
-            holdings: []
+            holdings: [],
+            manualModal: false,
+            newInvestment: { ticker: "", shares: "", basis: "" }
         };
 
         this.decimalFormater = this.formatter('en-US', { maximumFractionDigits: 2 });
@@ -33,13 +35,13 @@ export default class Portfolio extends React.Component {
 
     componentDidMount() {
         this.props.appState.onViewChange(false);
-        //this.updateHoldings();
-        this.setState({
-            holdings: [
-                { investment_id: 1, investment_name: "DOW", symbol: "DIA", latest_closing_price: 253.83, latest_price: 253.83, average_cost_basis: 88, number_shares: 100, date_updated: '02/06/2019', price_date: '02/06/2019' },
-                { investment_id: 2, investment_name: "S&P 500", symbol: "SPY", latest_closing_price: 272.795, latest_price: 272.795, average_cost_basis: 199, number_shares: 200, date_updated: '02/06/2019', price_date: '02/06/2019' }
-            ]
-        });
+        this.updateHoldings();
+        // this.setState({
+        //     holdings: [
+        //         { investment_id: 1, investment_name: "DOW", symbol: "DIA", latest_closing_price: 253.83, latest_price: 253.83, average_cost_basis: 88, number_shares: 100, date_updated: '02/06/2019', price_date: '02/06/2019' },
+        //         { investment_id: 2, investment_name: "S&P 500", symbol: "SPY", latest_closing_price: 272.795, latest_price: 272.795, average_cost_basis: 199, number_shares: 200, date_updated: '02/06/2019', price_date: '02/06/2019' }
+        //     ]
+        // });
         this.socket.open();
         this.socket.on('connect', () => {
             this.currentPricingDetail["currentState"] = { updated: Date.now() };
@@ -67,15 +69,28 @@ export default class Portfolio extends React.Component {
                 //const currentHolding = this.currentPricingDetail[holding.symbol];
                 //const holdingPriceTime = new Date(holding.price_date).getTime();
                 //if (holdingPriceTime < detail.time) {
-                    holding.latest_price = detail.price;
-                    holdings[holdingIndex] = holding;
-                    this.setState( { holdings });
+                holding.latest_price = detail.price;
+                holdings[holdingIndex] = holding;
+                this.setState({ holdings });
                 //}
             }
-            catch(err) {
+            catch (err) {
                 console.log(err);
-             };
+            };
         });
+    }
+
+    handleOnChange = (e) => {
+        const { value, name } = e.target
+        const stateobject = e.target.getAttribute("stateobject");
+        if (stateobject) {
+            this.setState(prevState => ({
+                [stateobject]: {
+                    ...prevState[stateobject],
+                    [name]: value
+                }
+            }));
+        }
     }
 
     updateCurrentPrices = async () => {
@@ -95,7 +110,7 @@ export default class Portfolio extends React.Component {
         try {
             this.props.appState.onStatusMessageChange(false, '');
             this.props.appState.onLoadingChange(true);
-            const response = await fetch(`./portfolios/${1}`);
+            const response = await fetch(`./portfolios/${this.props.match.params.id}`);
             if (response.status === 200) {
                 const json = await response.json();
                 this.setState({
@@ -125,6 +140,39 @@ export default class Portfolio extends React.Component {
         this.setState({
             selectedSecurity: symbol
         })
+    }
+
+    onCreateInvestmentClick = async (e) => {
+        e.preventDefault();
+        try {
+            const data = this.state['newInvestment'];
+            this.props.appState.onStatusMessageChange(false, '');
+            this.props.appState.onLoadingChange(true);
+            const response = await fetch(`./portfolios/${this.props.match.params.id}/addinvestment`, {
+                method: "POST",
+                body: JSON.stringify(data),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (response.status === 200) {
+                const json = await response.json();
+                if (json.success) {
+                    this.setState({ newInvestment: { ticker: "", shares: "", basis: "" } });
+                    await this.updateHoldings();
+                    this.setState({ showSection: null });
+                }
+                this.props.appState.onStatusMessageChange(true, json.message);
+            }
+            else {
+                console.log('Add Ticker - Invalid Server Response');
+                this.props.appState.onLoadingChange(false);
+                this.props.appState.onStatusMessageChange(true, 'The requested investment was not able to be added.');
+            }
+        }
+        catch (err) {
+            console.log(err);
+        }
     }
 
     formatter = (loc, settings) => {
@@ -196,25 +244,50 @@ export default class Portfolio extends React.Component {
             <CardHeader>
                 <h2 className="mb-0">
                     <span onClick={this.onTopToggle} toggle-target="Manage" className="btn btn-link" style={{ width: '100%', textAlign: 'left' }}>
-                        Add Investment
+                        Add Investment By Ticker
                     </span>
                 </h2>
             </CardHeader>
             <Collapse isOpen={this.state.showSection === "Manage"}>
                 <CardBody>
                     <div>
-                        <Form inline>
+                        <Form inline onSubmit={this.onCreateInvestmentClick}>
                             <FormGroup className="mb-2 mr-sm-2 mb-sm-0">
                                 <Label for="addTicker" className="mr-sm-2">Ticker</Label>
-                                <Input type="text" name="ticker" id="addTicker" placeholder="Ticker" required />
+                                <Input type="text"
+                                    name="ticker"
+                                    id="addTicker"
+                                    placeholder="Ticker"
+                                    stateobject="newInvestment"
+                                    onChange={this.handleOnChange}
+                                    value={this.state.newInvestment.ticker}
+                                    required />
                             </FormGroup>
                             <FormGroup className="mb-2 mr-sm-2 mb-sm-0">
                                 <Label for="addShares" className="mr-sm-2">Shares</Label>
-                                <Input type="number" step="any" name="shares" id="addShares" placeholder="# of Shares" required />
+                                <Input
+                                    type="number"
+                                    step="any"
+                                    name="shares"
+                                    id="addShares"
+                                    placeholder="# of Shares"
+                                    stateobject="newInvestment"
+                                    onChange={this.handleOnChange}
+                                    value={this.state.newInvestment.shares}
+                                    required />
                             </FormGroup>
                             <FormGroup className="mb-2 mr-sm-2 mb-sm-0">
                                 <Label for="addBasis" className="mr-sm-2">Avg. Stock Basis</Label>
-                                <Input type="number" step="any" name="basis" id="addBasis" placeholder="Basis" required />
+                                <Input
+                                    type="number"
+                                    step="any"
+                                    name="basis"
+                                    id="addBasis"
+                                    placeholder="Basis"
+                                    stateobject="newInvestment"
+                                    onChange={this.handleOnChange}
+                                    value={this.state.newInvestment.basis}
+                                    required />
                             </FormGroup>
                             <Button color="primary">Submit</Button>
                         </Form>
@@ -228,7 +301,7 @@ export default class Portfolio extends React.Component {
         return (<Card>
             <CardHeader>
                 <h2 className="mb-0">
-                    <span onClick={this.onTopToggle} toggle-target="Add" className="btn btn-link" style={{ width: '100%', textAlign: 'left' }}>
+                    <span onClick={this.onTopToggle} toggle-target="Add" className="btn btn-link" style={{ width: '80%', textAlign: 'left' }}>
                         Manage Manual Investments
                     </span>
                 </h2>
@@ -236,6 +309,10 @@ export default class Portfolio extends React.Component {
             <Collapse isOpen={this.state.showSection === "Add"}>
                 <CardBody>
                     <div>
+                        <Button color="primary" onClick={this.toggleManualInvestmentModal}>Add New Manual Investment</Button>
+                        <div className={"mt-2"}>
+                            <pre>Manual Investment Actions: <IoIosAdd></IoIosAdd> - Add To Portfolio || <IoMdCreate></IoMdCreate> - Edit Manual Investment || <IoIosClose></IoIosClose> - Delete (From All Portfolios)</pre>
+                        </div>
                         <Table responsive hover>
                             <thead>
                                 <tr>
@@ -278,6 +355,29 @@ export default class Portfolio extends React.Component {
         </Card>);
     }
 
+    toggleManualInvestmentModal = () => {
+        this.setState(prevState => ({
+            manualModal: !prevState.manualModal
+        }));
+    }
+
+    renderManualInvestmentModal = () => {
+        return (
+            <div>
+                <Modal isOpen={this.state.manualModal} toggle={this.toggleManualInvestmentModal}>
+                    <ModalHeader toggle={this.toggleManualInvestmentModal}>Modal title</ModalHeader>
+                    <ModalBody>
+                        Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                </ModalBody>
+                    <ModalFooter>
+                        <Button color="primary" onClick={this.toggleManualInvestmentModal}>Do Something</Button>{' '}
+                        <Button color="secondary" onClick={this.toggleManualInvestmentModal}>Cancel</Button>
+                    </ModalFooter>
+                </Modal>
+            </div>
+        );
+    }
+
     render() {
         if (this.state.holdings.length === 0) {
             return (<div>No holdings have been added to this portfolio.</div>)
@@ -291,7 +391,7 @@ export default class Portfolio extends React.Component {
                     </div>
                     <TickerDetail {...this.props} ticker={this.state.selectedSecurity}></TickerDetail>
                     <div className={"mt-2"}>
-                        <pre>Actions: <IoMdCreate></IoMdCreate> - Edit || <IoIosClose></IoIosClose> - Delete || <IoIosListBox></IoIosListBox> - Show Details</pre>
+                        <pre>Portfolio Actions: <IoMdCreate></IoMdCreate> - Edit || <IoIosClose></IoIosClose> - Delete || <IoIosListBox></IoIosListBox> - Show Details</pre>
                     </div>
                     <Table className="mt-3 portfolio-table" hover responsive>
                         <thead>
@@ -313,6 +413,7 @@ export default class Portfolio extends React.Component {
                             {this.createHoldingsTotal()}
                         </tbody>
                     </Table>
+                    {this.renderManualInvestmentModal()}
                 </div>)
         }
     }

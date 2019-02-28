@@ -104,10 +104,11 @@ app.get('/portfolios', async (req, res) => {
     try {
         if (req.session) {
             const userId = req.session.userId;
+            const portfolioName = req.query.search;
             const sql = `SELECT portfolio_id, portfolio_name FROM portfolios 
                 INNER JOIN users ON portfolios.user_id = users.user_id
-                WHERE users.user_id = ?`;
-            const results = await pool.query(sql, [userId]);
+                WHERE users.user_id = ? AND portfolio_name LIKE ?`;
+            const results = await pool.query(sql, [userId, '%' + portfolioName + '%']);
             res.send({ portfolios: results });
             return;
         }
@@ -139,6 +140,38 @@ app.get('/portfolios/:id', async (req, res) => {
         console.log(err);
     }
     res.send({ holdings: [] });
+});
+
+app.post('/portfolios/:id/addinvestment', async (req, res) => {
+    try {
+        if (req.session) {
+            const userId = req.session.userId;
+            //NEED TO VALIDATE PORTFOLIO IS USERS
+            const portfolioId = req.params.id;
+            const investment = req.body;
+
+            //Get Investment ID
+            const invesmentId = await addInvestment(investment.ticker);
+            if(invesmentId === -1)
+            {
+                res.send({ success: true, message: "The investment ticker is invalid." });
+                return;
+            }
+
+            const sql = `INSERT INTO holdings (portfolio_id, investment_id, average_cost_basis, date_updated, number_shares)
+            VALUES (?, ?, ?, NOW(), ?)`
+            const results = await pool.query(sql, [portfolioId, invesmentId, investment.basis, investment.shares]);
+            if (results.affectedRows > 0) {
+                //Successfully Added
+                res.send({ success: true, message: "The investment was successfully added to holdings." });
+                return;
+            }
+        }
+    }
+    catch (err) {
+        console.log(err);
+    }
+    res.send({ success: false, message: "The investment could not be added." });
 });
 
 app.delete('/portfolios/:id', async (req, res) => {
@@ -182,6 +215,39 @@ app.post('/portfolios/add', async (req, res) => {
 
 app.listen(PORT);
 
+addInvestment = async (ticker) => {
+    //Check if investment is currently in DB.
+    //Determine If Any Rates Are Needed
+    const sql = `SELECT investment_id, symbol, price_date 
+            FROM investments
+            WHERE user_id IS NULL AND symbol = ?`;
+    const results = await pool.query(sql, [ticker]);
+    if (results.length > 0) {
+        return results[0].investment_id;
+    }
+    else { //Insert New Investment
+        const companyResponse = await fetch(`https://api.iextrading.com/1.0/stock/${ticker}/company`);
+        const priceResponse = await fetch(`https://api.iextrading.com/1.0/stock/${ticker}/ohlc`);
+        if (companyResponse.status === 200 && priceResponse.status === 200) {
+            const companyJson = await companyResponse.json();
+            const priceJson = await priceResponse.json();
+
+            const sql = `INSERT INTO investments (symbol, investment_name, investmenttype_id, latest_closing_price, price_date, sector_id)
+            VALUES (?, ?, ?, ?, ?, ?);`;
+
+            // !!!!! NEED TO UPDATE INVESTMENT TYPE AND SECTORS !!!!!
+            // !!!!! NEED TO UPDATE INVESTMENT TYPE AND SECTORS !!!!!
+            // !!!!! NEED TO UPDATE INVESTMENT TYPE AND SECTORS !!!!!
+            const results = await pool.query(sql, [ticker, companyJson.companyName, 1, priceJson.close.price, new Date(priceJson.close.time), 1]);
+            console.log(results);
+            if (results.affectedRows > 0) {
+                return results.insertId;
+            }
+        }
+    }
+    return -1;
+}
+
 updateIEXRates = async () => {
     try {
         //Determine If Any Rates Are Needed
@@ -190,16 +256,21 @@ updateIEXRates = async () => {
         WHERE user_id IS NULL AND price_date < NOW() - INTERVAL 1 DAY`;
         const results = await pool.query(sql);
         if (results.length > 0) {
-            //Gather Latest Closing Rates From IEX API
-            const response = await fetch('https://api.iextrading.com/1.0/stock/market/ohlc');
-            if (response.status === 200) {
-                const json = await response.json();
+            //Gather Latest Closing Rates And Ticker Details From IEX API
+            const tickerResponse = await fetch('https://api.iextrading.com/1.0/ref-data/symbols');
+            const closeResponse = await fetch('https://api.iextrading.com/1.0/stock/market/ohlc');
+            if (closeResponse.status === 200 && tickerResponse.status === 200) {
+                const closeJson = await closeResponse.json();
+                const tickerJson = await tickerResponse.json();
                 results.forEach(element => {
-                    const apiDetail = json[element.symbol];
-                    const update = `UPDATE investments
-                    SET latest_closing_price = ?, price_date = ?
-                    WHERE investment_id = ?;`;
-                    pool.query(update, [apiDetail.close.price, new Date(apiDetail.close.time), element.investment_id]);
+                    const tickerDetail = tickerJson.find((ticker) => ticker.symbol === element.symbol);
+                    if (tickerDetail !== undefined) {
+                        const closeDetail = closeJson[element.symbol];
+                        const update = `UPDATE investments
+                            SET investment_name = ?, latest_closing_price = ?, price_date = ?
+                            WHERE investment_id = ?;`;
+                        pool.query(update, [tickerDetail.name, closeDetail.close.price, new Date(closeDetail.close.time), element.investment_id]);
+                    }
                 });
             }
         }

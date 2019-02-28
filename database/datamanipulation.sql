@@ -7,6 +7,11 @@ SELECT user_id, password_hash FROM users WHERE username = :usernameInput;
 --Update User Login Time
 UPDATE users SET last_login = NOW() WHERE user_id = :user_id
 
+--View('Select') Portfolios - With Search Capability
+SELECT portfolio_id, portfolio_name FROM portfolios 
+  INNER JOIN users ON portfolios.user_id = users.user_id
+  WHERE users.user_id = :user_id AND portfolio_name LIKE :search_string
+
 -- Add portfolio
 INSERT INTO portfolios (user_id, portfolio_name) VALUES (:user_id, :portfolioNameInput);
 
@@ -14,8 +19,8 @@ INSERT INTO portfolios (user_id, portfolio_name) VALUES (:user_id, :portfolioNam
 UPDATE portfolios SET portfolio_name = :new_portfolio_name
   WHERE portfolio_id = :portfolio_id AND user_id = :user_id;
 
--- View('Select') portfolio
-SELECT SELECT investments.investment_id, investments.symbol, investments.investment_name, 
+-- View('Select') Portfolio
+SELECT investments.investment_id, investments.symbol, investments.investment_name, 
   investments.latest_closing_price as latest_price, investments.latest_closing_price, holdings.average_cost_basis, 
   holdings.number_shares, investments.price_date, holdings.date_updated
 FROM investments 
@@ -36,8 +41,8 @@ INSERT INTO sectors (sector_name) VALUES (:sector_name);
 INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES (:api_code, :investmenttype_name);
 
 --Add investment 
-INSERT INTO investments (symbol, investment_name, investmenttype_id, latest_closing_price, sector_id)
-  VALUES (:symbol, :investment_name, :investmenttype_id, :latest_closing_price, :sector_id);
+INSERT INTO investments (symbol, investment_name, investmenttype_id, latest_closing_price, price_date, sector_id)
+  VALUES (:symbol, :investment_name, :investmenttype_id, :latest_closing_price, :price_date, :sector_id);
 
 --Update Investment Price
 UPDATE investments

@@ -1,8 +1,7 @@
 import React from 'react';
 import {
     Button, Card, CardBody, CardHeader, Collapse,
-    Form, FormGroup, Input, Label, Table
-} from 'reactstrap';
+    Form, FormGroup, Input, Label, Table} from 'reactstrap';
 import { Link } from 'react-router-dom'
 import { IoIosClose, IoIosListBox } from 'react-icons/io';
 
@@ -16,6 +15,8 @@ export default class Portfolios extends React.Component {
             portfolios: []
         };
     }
+
+    searchTimeout = null;
 
     toggle = (e) => {
         const toggleTarget = e.target.getAttribute("toggle-target")
@@ -31,21 +32,21 @@ export default class Portfolios extends React.Component {
         try {
             this.props.appState.onStatusMessageChange(false, '');
             this.props.appState.onLoadingChange(true);
-            // const response = await fetch(`./portfolios`);
-            // if (response.status === 200) {
-            //     const json = await response.json();
-            //     this.setState({
-            //         portfolios: json.portfolios
-            //     });
-            // }
-            // else { console.log('Update Portfolios - Invalid Server Response'); }
-            this.setState({
-                portfolios: [
-                    { portfolio_id: 1, portfolio_name: "401K" },
-                    { portfolio_id: 2, portfolio_name: "Roth" },
-                    { portfolio_id: 3, portfolio_name: "Taxable" }
-                ]
-            });
+            const response = await fetch(`./portfolios?search=` + this.state.portfolioSearch);
+            if (response.status === 200) {
+                const json = await response.json();
+                this.setState({
+                    portfolios: json.portfolios
+                });
+            }
+            else { console.log('Update Portfolios - Invalid Server Response'); }
+            // this.setState({
+            //     portfolios: [
+            //         { portfolio_id: 1, portfolio_name: "401K" },
+            //         { portfolio_id: 2, portfolio_name: "Roth" },
+            //         { portfolio_id: 3, portfolio_name: "Taxable" }
+            //     ]
+            // });
         }
         catch (err) {
             console.log(err);
@@ -108,8 +109,14 @@ export default class Portfolios extends React.Component {
         }
     }
 
-    updateSearch(e) {
-        this.setState({ portfolioSearch: e.target.value.substr(0, 20) });
+    updateSearch = (e) => {
+        this.setState({ portfolioSearch: e.target.value });
+        if (this.searchTimeout) {
+            clearTimeout(this.searchTimeout);
+        }
+        this.searchTimeout = setTimeout(() => {
+            this.updatePortfolios();
+        }, 1000);
     }
 
     componentDidMount() {
@@ -134,7 +141,7 @@ export default class Portfolios extends React.Component {
     }
 
     renderNoPortfolios = () => {
-        return (<div>No Portfolios have been created.</div>)
+        return (<div>No portfolios found.</div>)
     }
 
     renderCreatePortfolioSection = () => {
@@ -167,13 +174,7 @@ export default class Portfolios extends React.Component {
         </Card>)
     }
 
-    renderManagePortfoliosSection = (portfolios) => {
-        let filteredPortfolios = this.state.portfolios.filter(
-            (portfolio) => {
-                return portfolio.portfolio_name.toLowerCase().indexOf(this.state.portfolioSearch) !== -1;
-            }
-        );
-        const portfolioRows = this.createPortfolioRows(filteredPortfolios);
+    renderManagePortfoliosSection = () => {
         return (<Card>
             <CardHeader>
                 <h2 className="mb-0">
@@ -191,7 +192,7 @@ export default class Portfolios extends React.Component {
                                 <Input required type="text"
                                     name="portfolioSearch"
                                     id="portfolio-search"
-                                    onChange={this.updateSearch.bind(this)}
+                                    onChange={this.updateSearch}
                                     value={this.state.portfolioSearch}
                                     placeholder="Portfolio Name" />
                             </FormGroup>
@@ -200,34 +201,39 @@ export default class Portfolios extends React.Component {
                     <div>
                         <pre>Actions: <IoIosListBox></IoIosListBox> - Select || <IoIosClose></IoIosClose> - Delete</pre>
                     </div>
-                    <Table hover>
-                        <thead>
-                            <tr>
-                                <th>Portfolio</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {portfolioRows}
-                        </tbody>
-                    </Table>
+                    {this.renderPortfoliosTable()}
                 </CardBody>
             </Collapse>
         </Card>)
     }
 
-    render() {
+    renderPortfoliosTable = () => {
         const { portfolios } = this.state;
         if (portfolios.length === 0) {
             return this.renderNoPortfolios();
         }
         else {
-            return (<div>
-                <div className="accordion" id="portfolioAccordian">
-                    {this.renderCreatePortfolioSection()}
-                    {this.renderManagePortfoliosSection(portfolios)}
-                </div>
-            </div >)
+            const portfolioRows = this.createPortfolioRows(this.state.portfolios);
+            return (<Table hover>
+                <thead>
+                    <tr>
+                        <th>Portfolio</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {portfolioRows}
+                </tbody>
+            </Table>);
         }
+    }
+
+    render() {
+        return (<div>
+            <div className="accordion" id="portfolioAccordian">
+                {this.renderCreatePortfolioSection()}
+                {this.renderManagePortfoliosSection()}
+            </div>
+        </div >)
     }
 }   
