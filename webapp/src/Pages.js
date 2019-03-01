@@ -26,7 +26,7 @@ export default class Pages extends React.Component {
                     </dt>
                     <dd className="col-sm-9">This page will allow a user to sign-up for the service.  In the final version of this site, a user will be required to sign up to access the portfolios and portfolio sections detail above.</dd>
                     <dt className="col-sm-3">
-                        <Link to={"./signup"}>Login</Link>
+                        <Link to={"./login"}>Login</Link>
                     </dt>
                     <dd className="col-sm-9">This page will allow a user to login to the service.  For demo and testing purposes, a "TestUser" account has been setup.  You can log into this account using "TestUser" as the username and password.</dd>
                 </dl>

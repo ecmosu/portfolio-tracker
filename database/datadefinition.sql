@@ -67,6 +67,7 @@ INSERT INTO portfolios (portfolio_name, user_id) VALUES ('401K', 1);
 INSERT INTO portfolios (portfolio_name, user_id) VALUES ('Roth', 1);
 INSERT INTO portfolios (portfolio_name, user_id) VALUES ('Taxable', 1);
 INSERT INTO sectors (sector_name) VALUES ('Fund');
+INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('USER', 'User Investment');
 INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('AD', 'ADR');
 INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('RE', 'REIT');
 INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('CE', 'CE');

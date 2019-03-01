@@ -21,8 +21,10 @@ export default class Portfolio extends React.Component {
             showSection: true,
             selectedSecurity: "",
             holdings: [],
+            userInvestments: [],
             manualModal: false,
-            newInvestment: { ticker: "", shares: "", basis: "" }
+            newInvestment: { ticker: "", shares: "", basis: "" },
+            newManualInvestment: { manualName: "", manualPrice: "" }
         };
 
         this.decimalFormater = this.formatter('en-US', { maximumFractionDigits: 2 });
@@ -35,19 +37,17 @@ export default class Portfolio extends React.Component {
 
     componentDidMount() {
         this.props.appState.onViewChange(false);
+        this.updateUserInvestments();
         this.updateHoldings();
-        // this.setState({
-        //     holdings: [
-        //         { investment_id: 1, investment_name: "DOW", symbol: "DIA", latest_closing_price: 253.83, latest_price: 253.83, average_cost_basis: 88, number_shares: 100, date_updated: '02/06/2019', price_date: '02/06/2019' },
-        //         { investment_id: 2, investment_name: "S&P 500", symbol: "SPY", latest_closing_price: 272.795, latest_price: 272.795, average_cost_basis: 199, number_shares: 200, date_updated: '02/06/2019', price_date: '02/06/2019' }
-        //     ]
-        // });
+
         this.socket.open();
         this.socket.on('connect', () => {
             this.currentPricingDetail["currentState"] = { updated: Date.now() };
             this.state.holdings.forEach(item => {
-                this.currentPricingDetail[item.symbol] = { price: item.latest_price };
-                this.socket.emit('subscribe', item.symbol);
+                if (item.api_code !== "USER") {
+                    this.currentPricingDetail[item.symbol] = { price: item.latest_price };
+                    this.socket.emit('subscribe', item.symbol);
+                }
             });
 
             //setInterval(this.updateCurrentPrices, 2000);
@@ -125,6 +125,25 @@ export default class Portfolio extends React.Component {
         this.props.appState.onLoadingChange(false);
     }
 
+    updateUserInvestments = async () => {
+        try {
+            this.props.appState.onStatusMessageChange(false, '');
+            this.props.appState.onLoadingChange(true);
+            const response = await fetch(`./user/investments`);
+            if (response.status === 200) {
+                const json = await response.json();
+                this.setState({
+                    userInvestments: json.userInvestments
+                });
+            }
+            else { console.log('Update User Investments - Invalid Server Response'); }
+        }
+        catch (err) {
+            console.log(err);
+        }
+        this.props.appState.onLoadingChange(false);
+    }
+
     onTopToggle = (e) => {
         const toggleTarget = e.target.getAttribute("toggle-target")
         if (this.state.showSection === toggleTarget) {
@@ -140,6 +159,39 @@ export default class Portfolio extends React.Component {
         this.setState({
             selectedSecurity: symbol
         })
+    }
+
+    onAddManualInvestmentClick = async (e) => {
+        try {
+            const data = {investment_id: e.currentTarget.getAttribute("id"), shares: 50, basis: 100 };
+            this.props.appState.onStatusMessageChange(false, '');
+            this.props.appState.onLoadingChange(true);
+            const response = await fetch(`./portfolios/${this.props.match.params.id}/addholding`, {
+                method: "POST",
+                body: JSON.stringify(data),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (response.status === 200) {
+                const json = await response.json();
+                if (json.success) {
+                    await this.updateHoldings();
+                }
+                else {
+                    this.props.appState.onLoadingChange(false);
+                }
+                this.props.appState.onStatusMessageChange(true, json.message);
+            }
+            else {
+                console.log('Add Holding - Invalid Server Response');
+                this.props.appState.onLoadingChange(false);
+                this.props.appState.onStatusMessageChange(true, 'The requested investment was not able to be added.');
+            }
+        }
+        catch (err) {
+            console.log(err);
+        }
     }
 
     onCreateInvestmentClick = async (e) => {
@@ -162,12 +214,51 @@ export default class Portfolio extends React.Component {
                     await this.updateHoldings();
                     this.setState({ showSection: null });
                 }
+                else {
+                    this.props.appState.onLoadingChange(false);
+                }
                 this.props.appState.onStatusMessageChange(true, json.message);
             }
             else {
                 console.log('Add Ticker - Invalid Server Response');
                 this.props.appState.onLoadingChange(false);
                 this.props.appState.onStatusMessageChange(true, 'The requested investment was not able to be added.');
+            }
+        }
+        catch (err) {
+            console.log(err);
+        }
+    }
+
+    onCreateManualInvestmentClick = async (e) => {
+        e.preventDefault();
+        try {
+            const data = this.state['newManualInvestment'];
+            this.props.appState.onStatusMessageChange(false, '');
+            this.props.appState.onLoadingChange(true);
+            const response = await fetch(`./user/investments/add`, {
+                method: "POST",
+                body: JSON.stringify(data),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (response.status === 200) {
+                const json = await response.json();
+                if (json.success) {
+                    this.setState({ newManualInvestment: { manualName: "", manualPrice: "" } });
+                    await this.updateUserInvestments();
+                    this.setState({ showSection: null });
+                }
+                else {
+                    this.props.appState.onLoadingChange(false);
+                }
+                this.props.appState.onStatusMessageChange(true, json.message);
+            }
+            else {
+                console.log('Add Manual Investment - Invalid Server Response');
+                this.props.appState.onLoadingChange(false);
+                this.props.appState.onStatusMessageChange(true, 'The requested manual investment was not able to be added.');
             }
         }
         catch (err) {
@@ -191,6 +282,27 @@ export default class Portfolio extends React.Component {
         else {
             return (<pre style={{ color: 'black' }}>{this.percentFormater(value)}</pre>)
         }
+    }
+
+    createUserInvestmentRows = () => {
+        return this.state.userInvestments.map((userInvestment) => {
+            return (
+                <tr key={userInvestment.investment_id}>
+                    <td>{userInvestment.investment_name}</td>
+                    <td>{this.decimalFormater(userInvestment.current_price)}</td>
+                    <td>{new Intl.DateTimeFormat('en-US').format(new Date(userInvestment.date_updated))}</td>
+                    <td>
+                        <span className="icon-wrapper">
+                            <IoIosAdd onClick={this.onAddManualInvestmentClick} id={userInvestment.investment_id}></IoIosAdd>
+                        </span>
+                        <span> | </span>
+                        <span className="icon-wrapper"><IoMdCreate></IoMdCreate></span>
+                        <span> | </span>
+                        <span className="icon-wrapper"><IoIosClose></IoIosClose></span>
+                    </td>
+                </tr>
+            )
+        });
     }
 
     createHoldingsRows = () => {
@@ -309,7 +421,34 @@ export default class Portfolio extends React.Component {
             <Collapse isOpen={this.state.showSection === "Add"}>
                 <CardBody>
                     <div>
-                        <Button color="primary" onClick={this.toggleManualInvestmentModal}>Add New Manual Investment</Button>
+                        <Form inline onSubmit={this.onCreateManualInvestmentClick}>
+                            <FormGroup className="mb-2 mr-sm-2 mb-sm-0">
+                                <Label for="addManualName" className="mr-sm-2">Investment Name</Label>
+                                <Input type="text"
+                                    name="manualName"
+                                    id="addManualName"
+                                    placeholder="Investment Name"
+                                    stateobject="newManualInvestment"
+                                    onChange={this.handleOnChange}
+                                    value={this.state.newManualInvestment.manualName}
+                                    required />
+                            </FormGroup>
+                            <FormGroup className="mb-2 mr-sm-2 mb-sm-0">
+                                <Label for="addManualPrice" className="mr-sm-2">Current Price</Label>
+                                <Input
+                                    type="number"
+                                    step="any"
+                                    name="manualPrice"
+                                    id="addManualPrice"
+                                    placeholder="Current Price"
+                                    stateobject="newManualInvestment"
+                                    onChange={this.handleOnChange}
+                                    value={this.state.newManualInvestment.manualPrice}
+                                    required />
+                            </FormGroup>
+                            <Button color="primary">Submit</Button>
+                        </Form>
+                        {/* <Button color="primary" onClick={this.toggleManualInvestmentModal}>Add New Manual Investment</Button> */}
                         <div className={"mt-2"}>
                             <pre>Manual Investment Actions: <IoIosAdd></IoIosAdd> - Add To Portfolio || <IoMdCreate></IoMdCreate> - Edit Manual Investment || <IoIosClose></IoIosClose> - Delete (From All Portfolios)</pre>
                         </div>
@@ -323,30 +462,7 @@ export default class Portfolio extends React.Component {
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td>Manual Investment #1</td>
-                                    <td>101.23</td>
-                                    <td>02/06/2019</td>
-                                    <td>
-                                        <span className="icon-wrapper"><IoIosAdd></IoIosAdd></span>
-                                        <span> | </span>
-                                        <span className="icon-wrapper"><IoMdCreate></IoMdCreate></span>
-                                        <span> | </span>
-                                        <span className="icon-wrapper"><IoIosClose></IoIosClose></span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>Hedge Fund Holding #1</td>
-                                    <td>1023.24</td>
-                                    <td>02/06/2019</td>
-                                    <td>
-                                        <span className="icon-wrapper"><IoIosAdd></IoIosAdd></span>
-                                        <span> | </span>
-                                        <span className="icon-wrapper"><IoMdCreate></IoMdCreate></span>
-                                        <span> | </span>
-                                        <span className="icon-wrapper"><IoIosClose></IoIosClose></span>
-                                    </td>
-                                </tr>
+                                {this.createUserInvestmentRows()}
                             </tbody>
                         </Table>
                     </div>
@@ -379,9 +495,19 @@ export default class Portfolio extends React.Component {
     }
 
     render() {
-        if (this.state.holdings.length === 0) {
-            return (<div>No holdings have been added to this portfolio.</div>)
+        if (!this.props.appState.state.userDetail.loggedIn) {
+            return (<div className="card mt-3">
+                <div className="card-body">
+                    <h1 className="card-title">Portfolio Tracker</h1>
+                    <h4 className="card-subtitle mb-2 text-muted">Welcome to the Portfolio Tracker!</h4>
+                    <div>Please login or register to view a portfolio.</div>
+                </div>
+            </div>)
         }
+
+        // if (this.state.holdings.length === 0) {
+        //     return (<div>No holdings have been added to this portfolio.</div>)
+        // }
         else {
             return (
                 <div>

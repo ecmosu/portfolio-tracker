@@ -99,6 +99,48 @@ app.post('/register', async (req, res) => {
     }
 });
 
+app.get('/user/investments', async (req, res) => {
+    try {
+        if (req.session) {
+            const userId = req.session.userId;
+            const portfolioName = req.query.search;
+            const sql = `SELECT investment_id, investment_name, latest_closing_price AS current_price, price_date AS date_updated
+                FROM investments
+                WHERE user_id = ?`;
+            const results = await pool.query(sql, [userId]);
+            res.send({ userInvestments: results });
+            return;
+        }
+    }
+    catch (err) {
+        console.log(err);
+    }
+    res.send({ userInvestments: [] });
+});
+
+app.post('/user/investments/add', async (req, res) => {
+    try {
+        if (req.session) {
+            const userId = req.session.userId;
+            const investment = req.body;
+
+            const sql = `INSERT INTO investments 
+                (symbol, investment_name, investmenttype_id, latest_closing_price, price_date, sector_id, user_id)
+                VALUES ('N/A', ?, (SELECT investmenttype_id FROM investmenttypes WHERE api_code = 'USER' LIMIT 1), ?, NOW(), NULL, ?)`
+            const results = await pool.query(sql, [investment.manualName, investment.manualPrice, userId]);
+            if (results.affectedRows > 0) {
+                //Successfully Added
+                res.send({ success: true, message: "The investment was successfully added." });
+                return;
+            }
+        }
+    }
+    catch (err) {
+        console.log(err);
+    }
+    res.send({ success: false, message: "The investment could not be added." });
+});
+
 //Portfolios Endpoints
 app.get('/portfolios', async (req, res) => {
     try {
@@ -126,10 +168,11 @@ app.get('/portfolios/:id', async (req, res) => {
             const portfolioId = req.params.id;
             const sql = `SELECT investments.investment_id, investments.symbol, investments.investment_name, 
                 investments.latest_closing_price as latest_price, investments.latest_closing_price, holdings.average_cost_basis, 
-                holdings.number_shares, investments.price_date, holdings.date_updated 
+                holdings.number_shares, investments.price_date, holdings.date_updated, investmenttypes.api_code
             FROM investments 
                 INNER JOIN holdings ON investments.investment_id = holdings.investment_id 
-                INNER JOIN portfolios ON holdings.portfolio_id =  portfolios.portfolio_id 
+                INNER JOIN portfolios ON holdings.portfolio_id =  portfolios.portfolio_id
+                INNER JOIN investmenttypes ON investments.investmenttype_id = investmenttypes.investmenttype_id
             WHERE portfolios.user_id = ? AND portfolios.portfolio_id = ?`;
             const results = await pool.query(sql, [userId, portfolioId]);
             res.send({ holdings: results });
@@ -142,18 +185,46 @@ app.get('/portfolios/:id', async (req, res) => {
     res.send({ holdings: [] });
 });
 
+app.post('/portfolios/:id/addholding', async (req, res) => {
+    try {
+        if (req.session) {
+            const userId = req.session.userId;
+            //NEED TO VALIDATE PORTFOLIO IS USER'S
+            const portfolioId = req.params.id;
+            const investment = req.body;
+
+            const sql = `INSERT INTO holdings (portfolio_id, investment_id, average_cost_basis, date_updated, number_shares)
+            VALUES (?, ?, ?, NOW(), ?)`
+            const results = await pool.query(sql, [portfolioId, investment.investment_id, investment.basis, investment.shares]);
+            if (results.affectedRows > 0) {
+                //Successfully Added
+                res.send({ success: true, message: "The investment was successfully added to holdings." });
+                return;
+            }
+        }
+    }
+    catch (err) {
+        console.log(err);
+        if(err.errno === 1062)
+        {
+            res.send({ success: false, message: "The selected investment already exists in this portfolio." });
+            return;
+        }
+    }
+    res.send({ success: false, message: "The investment could not be added." });
+});
+
 app.post('/portfolios/:id/addinvestment', async (req, res) => {
     try {
         if (req.session) {
             const userId = req.session.userId;
-            //NEED TO VALIDATE PORTFOLIO IS USERS
+            //NEED TO VALIDATE PORTFOLIO IS USER'S
             const portfolioId = req.params.id;
             const investment = req.body;
 
             //Get Investment ID
             const invesmentId = await addInvestment(investment.ticker);
-            if(invesmentId === -1)
-            {
+            if (invesmentId === -1) {
                 res.send({ success: true, message: "The investment ticker is invalid." });
                 return;
             }
