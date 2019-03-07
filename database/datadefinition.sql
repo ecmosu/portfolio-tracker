@@ -59,26 +59,26 @@ CREATE TABLE `holdings` (
   `date_updated` TIMESTAMP on update CURRENT_TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
   PRIMARY KEY (`portfolio_id`, `investment_id`),
   CONSTRAINT `holdings_ibfk_1` FOREIGN KEY (`portfolio_id`) REFERENCES `portfolios` (`portfolio_id`) ON DELETE CASCADE,
-  CONSTRAINT `holdings_ibfk_2` FOREIGN KEY (`investment_id`) REFERENCES `investments` (`investment_id`)
+  CONSTRAINT `holdings_ibfk_2` FOREIGN KEY (`investment_id`) REFERENCES `investments` (`investment_id`) ON DELETE CASCADE
 ) ENGINE = InnoDB;
 
 INSERT INTO users (username, password_hash) VALUES ('TestUser', '$2b$10$an7Mdvqxap5FlWLdz279RuaRSUiLg/PiWYCGu/G/20UBSiKDc5FnK');
 INSERT INTO portfolios (portfolio_name, user_id) VALUES ('401K', 1);
 INSERT INTO portfolios (portfolio_name, user_id) VALUES ('Roth', 1);
 INSERT INTO portfolios (portfolio_name, user_id) VALUES ('Taxable', 1);
-INSERT INTO sectors (sector_name) VALUES ('Fund');
 INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('USER', 'User Investment');
-INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('AD', 'ADR');
-INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('RE', 'REIT');
-INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('CE', 'CE');
-INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('SI', 'SI');
-INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('LP', 'LP');
-INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('CS', 'CS');
-INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('ET', 'ETF');
-INSERT INTO investments (symbol, investment_name, investmenttype_id, latest_closing_price, price_date, sector_id)
-  VALUES ('DIA', 'SPDR Dow Jones Industrial Average', 7, 251.32, NOW() - INTERVAL 7 DAY, 1);
-INSERT INTO investments (symbol, investment_name, investmenttype_id, latest_closing_price, price_date, sector_id)
-  VALUES ('SPY', 'SPDR S&P 500', 7, 251.32, NOW() - INTERVAL 7 DAY, 1);
+INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('N/A', 'Unclassified');
+INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('AD', 'American Depository Receipt (ADR)');
+INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('RE', 'Real Estate Investment Trust (REIT)');
+INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('CE', 'Closed End Fund (Stock and Bond Fund)');
+INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('SI', 'Secondary Issue');
+INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('LP', 'Limited Partnerships');
+INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('CS', 'Common Stock');
+INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('ET', 'Exchange Traded Fund (ETF)');
+INSERT INTO investments (symbol, investment_name, investmenttype_id, latest_closing_price, price_date)
+  VALUES ('DIA', 'SPDR Dow Jones Industrial Average', 7, 251.32, NOW() - INTERVAL 7 DAY);
+INSERT INTO investments (symbol, investment_name, investmenttype_id, latest_closing_price, price_date)
+  VALUES ('SPY', 'SPDR S&P 500', 7, 251.32, NOW() - INTERVAL 7 DAY);
 INSERT INTO holdings (portfolio_id, investment_id, average_cost_basis, date_updated, number_shares)
   VALUES (1, 1, 88, NOW(), 100);
 INSERT INTO holdings (portfolio_id, investment_id, average_cost_basis, date_updated, number_shares)

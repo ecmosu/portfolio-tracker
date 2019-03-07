@@ -99,13 +99,26 @@ app.post('/register', async (req, res) => {
     }
 });
 
+app.get('/sectors', async (req, res) => {
+    try {
+        const sql = `SELECT sector_id, sector_name FROM sectors ORDER BY sector_name`;
+        const results = await pool.query(sql);
+        res.send({ sectors: results });
+        return;
+    }
+    catch (err) {
+        console.log(err);
+    }
+    res.send({ sectors: results });
+});
+
 app.get('/user/investments', async (req, res) => {
     try {
-        if (req.session) {
+        if (req.session && req.session.userId) {
             const userId = req.session.userId;
-            const portfolioName = req.query.search;
-            const sql = `SELECT investment_id, investment_name, latest_closing_price AS current_price, price_date AS date_updated
+            const sql = `SELECT investment_id, investment_name, IFNULL(sector_name, 'Unclassified') as sector_name, latest_closing_price AS current_price, price_date AS date_updated
                 FROM investments
+                LEFT JOIN sectors on investments.sector_id = sectors.sector_id
                 WHERE user_id = ?`;
             const results = await pool.query(sql, [userId]);
             res.send({ userInvestments: results });
@@ -120,14 +133,15 @@ app.get('/user/investments', async (req, res) => {
 
 app.post('/user/investments/add', async (req, res) => {
     try {
-        if (req.session) {
+        if (req.session && req.session.userId) {
             const userId = req.session.userId;
             const investment = req.body;
 
             const sql = `INSERT INTO investments 
                 (symbol, investment_name, investmenttype_id, latest_closing_price, price_date, sector_id, user_id)
-                VALUES ('N/A', ?, (SELECT investmenttype_id FROM investmenttypes WHERE api_code = 'USER' LIMIT 1), ?, NOW(), NULL, ?)`
-            const results = await pool.query(sql, [investment.manualName, investment.manualPrice, userId]);
+                VALUES ('N/A', ?, (SELECT investmenttype_id FROM investmenttypes WHERE api_code = 'USER' LIMIT 1),
+                ?, NOW(), (SELECT sector_id FROM sectors WHERE sector_name = ? LIMIT 1), ?)`
+            const results = await pool.query(sql, [investment.name, investment.price, investment.sector, userId]);
             if (results.affectedRows > 0) {
                 //Successfully Added
                 res.send({ success: true, message: "The investment was successfully added." });
@@ -141,10 +155,29 @@ app.post('/user/investments/add', async (req, res) => {
     res.send({ success: false, message: "The investment could not be added." });
 });
 
+app.delete('/user/investments/:id', async (req, res) => {
+    try {
+        if (req.session && req.session.userId) {
+            const userId = req.session.userId;
+            const investmentId = req.params.id;
+            const sql = `DELETE FROM investments 
+                WHERE investment_id = ? AND user_id = ?`;
+            const results = await pool.query(sql, [investmentId, userId]);
+            console.log(results);
+            res.send({ success: true, message: "The investment was successfully deleted." });
+            return;
+        }
+    }
+    catch (err) {
+        console.log(err);
+    }
+    res.send({ success: false, message: "An error occurred.  The investment was not deleted." });
+});
+
 //Portfolios Endpoints
 app.get('/portfolios', async (req, res) => {
     try {
-        if (req.session) {
+        if (req.session && req.session.userId) {
             const userId = req.session.userId;
             const portfolioName = req.query.search;
             const sql = `SELECT portfolio_id, portfolio_name FROM portfolios 
@@ -163,18 +196,27 @@ app.get('/portfolios', async (req, res) => {
 
 app.get('/portfolios/:id', async (req, res) => {
     try {
-        if (req.session) {
+        if (req.session && req.session.userId) {
             const userId = req.session.userId;
             const portfolioId = req.params.id;
+            const sectorId = req.query.sector_id;
+            const assetId = req.query.asset_id;
             const sql = `SELECT investments.investment_id, investments.symbol, investments.investment_name, 
                 investments.latest_closing_price as latest_price, investments.latest_closing_price, holdings.average_cost_basis, 
-                holdings.number_shares, investments.price_date, holdings.date_updated, investmenttypes.api_code
+                holdings.number_shares, investments.price_date, holdings.date_updated, 
+                investments.investmenttype_id, investmenttypes.api_code, investmenttypes.investmenttype_name, investments.sector_id, IFNULL(sector_name, 'Unclassified') as sector_name
             FROM investments 
                 INNER JOIN holdings ON investments.investment_id = holdings.investment_id 
                 INNER JOIN portfolios ON holdings.portfolio_id =  portfolios.portfolio_id
                 INNER JOIN investmenttypes ON investments.investmenttype_id = investmenttypes.investmenttype_id
-            WHERE portfolios.user_id = ? AND portfolios.portfolio_id = ?`;
-            const results = await pool.query(sql, [userId, portfolioId]);
+                LEFT JOIN sectors ON investments.sector_id = sectors.sector_id
+            WHERE portfolios.user_id = ? AND portfolios.portfolio_id = ? 
+                AND IFNULL(investments.sector_id, '') LIKE (?)
+                AND IFNULL(investments.investmenttype_id, '') LIKE (?)
+            ORDER BY investments.investment_name`;
+            const results = await pool.query(sql, [userId, portfolioId, 
+                sectorId === undefined ? '%' : (sectorId === "null" ? "" : sectorId),
+                assetId === undefined ? '%' : assetId]);
             res.send({ holdings: results });
             return;
         }
@@ -187,7 +229,7 @@ app.get('/portfolios/:id', async (req, res) => {
 
 app.post('/portfolios/:id/addholding', async (req, res) => {
     try {
-        if (req.session) {
+        if (req.session && req.session.userId) {
             const userId = req.session.userId;
             //NEED TO VALIDATE PORTFOLIO IS USER'S
             const portfolioId = req.params.id;
@@ -205,8 +247,7 @@ app.post('/portfolios/:id/addholding', async (req, res) => {
     }
     catch (err) {
         console.log(err);
-        if(err.errno === 1062)
-        {
+        if (err.errno === 1062) {
             res.send({ success: false, message: "The selected investment already exists in this portfolio." });
             return;
         }
@@ -216,7 +257,7 @@ app.post('/portfolios/:id/addholding', async (req, res) => {
 
 app.post('/portfolios/:id/addinvestment', async (req, res) => {
     try {
-        if (req.session) {
+        if (req.session && req.session.userId) {
             const userId = req.session.userId;
             //NEED TO VALIDATE PORTFOLIO IS USER'S
             const portfolioId = req.params.id;
@@ -247,7 +288,7 @@ app.post('/portfolios/:id/addinvestment', async (req, res) => {
 
 app.delete('/portfolios/:id', async (req, res) => {
     try {
-        if (req.session) {
+        if (req.session && req.session.userId) {
             const userId = req.session.userId;
             const portfolioId = req.params.id;
             const sql = `DELETE FROM portfolios 
@@ -266,7 +307,7 @@ app.delete('/portfolios/:id', async (req, res) => {
 
 app.post('/portfolios/add', async (req, res) => {
     try {
-        if (req.session) {
+        if (req.session && req.session.userId) {
             const userId = req.session.userId;
             const portfolioName = req.body.name;
             const sql = `INSERT INTO portfolios (user_id, portfolio_name) VALUES (?, ?)`;
@@ -303,13 +344,23 @@ addInvestment = async (ticker) => {
             const companyJson = await companyResponse.json();
             const priceJson = await priceResponse.json();
 
-            const sql = `INSERT INTO investments (symbol, investment_name, investmenttype_id, latest_closing_price, price_date, sector_id)
-            VALUES (?, ?, ?, ?, ?, ?);`;
+            //Determine If Sector Is In DB
+            if (companyResponse.sector !== "") {
+                const sectorSql = `SELECT sector_id FROM sectors WHERE sector_name = ?`;
+                const results = await pool.query(sectorSql, [companyJson.sector]);
+                if (results.length === 0) {
+                    //Insert Missing Sector
+                    const sectorInsertSql = `INSERT INTO sectors (sector_name) VALUES (?)`;
+                    await pool.query(sectorInsertSql, [companyJson.sector]);
+                }
+            }
 
-            // !!!!! NEED TO UPDATE INVESTMENT TYPE AND SECTORS !!!!!
-            // !!!!! NEED TO UPDATE INVESTMENT TYPE AND SECTORS !!!!!
-            // !!!!! NEED TO UPDATE INVESTMENT TYPE AND SECTORS !!!!!
-            const results = await pool.query(sql, [ticker, companyJson.companyName, 1, priceJson.close.price, new Date(priceJson.close.time), 1]);
+            //Insert Sector
+            const sql = `INSERT INTO investments (symbol, investment_name, latest_closing_price, price_date, sector_id, investmenttype_id)
+            VALUES (?, ?, ?, ?, 
+                (SELECT sector_id FROM sectors WHERE sector_name = ? LIMIT 1),
+                (SELECT investmenttype_id FROM investmenttypes WHERE api_code = ? LIMIT 1));`;
+            const results = await pool.query(sql, [ticker, companyJson.companyName, priceJson.close.price, new Date(priceJson.close.time), companyJson.sector, companyJson.issueType]);
             console.log(results);
             if (results.affectedRows > 0) {
                 return results.insertId;
@@ -317,6 +368,29 @@ addInvestment = async (ticker) => {
         }
     }
     return -1;
+}
+
+updateIEXSectors = async () => {
+    try {
+        //Determine If Any Rates Are Needed
+        const sql = `SELECT sector_id, sector_name FROM sectors`;
+        const results = await pool.query(sql);
+        //Gather Latest Sector Details From IEX API
+        const sectorResponse = await fetch('https://api.iextrading.com/1.0/stock/market/sector-performance');
+        if (sectorResponse.status === 200) {
+            const sectorJson = await sectorResponse.json();
+            sectorJson.forEach(element => {
+                const sectorEntry = results.find((sector) => sector.sector_name === element.name);
+                if (sectorEntry === undefined) {
+                    const create = `INSERT INTO sectors (sector_name) VALUES (?)`;
+                    pool.query(create, [element.name]);
+                }
+            });
+        }
+    }
+    catch (err) {
+        console.log(err);
+    }
 }
 
 updateIEXRates = async () => {
@@ -338,9 +412,9 @@ updateIEXRates = async () => {
                     if (tickerDetail !== undefined) {
                         const closeDetail = closeJson[element.symbol];
                         const update = `UPDATE investments
-                            SET investment_name = ?, latest_closing_price = ?, price_date = ?
+                            SET investment_name = ?, latest_closing_price = ?, price_date = ?, investmenttype_id = (SELECT investmenttype_id FROM investmenttypes WHERE api_code = ? LIMIT 1)
                             WHERE investment_id = ?;`;
-                        pool.query(update, [tickerDetail.name, closeDetail.close.price, new Date(closeDetail.close.time), element.investment_id]);
+                        pool.query(update, [tickerDetail.name, closeDetail.close.price, new Date(closeDetail.close.time), tickerDetail.type, element.investment_id]);
                     }
                 });
             }
@@ -351,11 +425,15 @@ updateIEXRates = async () => {
     }
 }
 
+runUpdateTasks = async () => {
+    await updateIEXSectors();
+    await updateIEXRates();
+}
+
 /* Node Services - This should be decomposed and run as a seperate service from the API,
 for purposes of this project they will run under a single service. */
-
-updateIEXRates();
+runUpdateTasks();
 const refreshTime = 1000 * 60 * 60; //Every Hour  
 setInterval(() => {
-    updateIEXRates();
+    runUpdateTasks();
 }, refreshTime);

@@ -1,11 +1,11 @@
 import React from 'react';
-import { IoIosTrendingUp, IoIosListBox, IoIosTrendingDown, IoIosClose, IoIosAdd, IoMdCreate } from 'react-icons/io';
-import {
-    Form, FormGroup, Button, Card, CardBody, CardHeader, Collapse,
-    Input, Label, Table, Modal, ModalHeader, ModalBody, ModalFooter
-} from 'reactstrap';
+import { IoIosTrendingUp, IoIosListBox, IoIosTrendingDown, IoIosClose, IoMdCreate } from 'react-icons/io';
+import { Table } from 'reactstrap';
 import TickerDetail from './TickerDetail';
+import PortfolioSummary from './PortfolioSummary';
 import PortfolioEntry from './PortfolioEntry';
+import AddInvestment from './AddInvestment';
+import ManageManualInvestments from './ManageManualInvestments';
 import io from 'socket.io-client';
 
 export default class Portfolio extends React.Component {
@@ -20,11 +20,9 @@ export default class Portfolio extends React.Component {
         this.state = {
             showSection: true,
             selectedSecurity: "",
-            holdings: [],
-            userInvestments: [],
-            manualModal: false,
-            newInvestment: { ticker: "", shares: "", basis: "" },
-            newManualInvestment: { manualName: "", manualPrice: "" }
+            currentSector: "",
+            currentAsset: "",
+            holdings: []
         };
 
         this.decimalFormater = this.formatter('en-US', { maximumFractionDigits: 2 });
@@ -37,7 +35,6 @@ export default class Portfolio extends React.Component {
 
     componentDidMount() {
         this.props.appState.onViewChange(false);
-        this.updateUserInvestments();
         this.updateHoldings();
 
         this.socket.open();
@@ -93,6 +90,15 @@ export default class Portfolio extends React.Component {
         }
     }
 
+    handleSummaryFilter = (key, value) => {
+        if (this.state[key] === value) {
+            this.setState({[key]: ""}, this.updateHoldings);
+        }
+        else {
+            this.setState({ [key]: value }, this.updateHoldings);
+        }
+    }
+
     updateCurrentPrices = async () => {
         let holdings = [...this.state.holdings];
         holdings.forEach((element, holdingIndex) => {
@@ -110,7 +116,7 @@ export default class Portfolio extends React.Component {
         try {
             this.props.appState.onStatusMessageChange(false, '');
             this.props.appState.onLoadingChange(true);
-            const response = await fetch(`./portfolios/${this.props.match.params.id}`);
+            const response = await fetch(`./portfolios/${this.props.match.params.id}?${this.state.currentSector === "" ? "" : "&sector_id=" + this.state.currentSector}${this.state.currentAsset === "" ? "" : "&asset_id=" + this.state.currentAsset}`);
             if (response.status === 200) {
                 const json = await response.json();
                 this.setState({
@@ -125,32 +131,12 @@ export default class Portfolio extends React.Component {
         this.props.appState.onLoadingChange(false);
     }
 
-    updateUserInvestments = async () => {
-        try {
-            this.props.appState.onStatusMessageChange(false, '');
-            this.props.appState.onLoadingChange(true);
-            const response = await fetch(`./user/investments`);
-            if (response.status === 200) {
-                const json = await response.json();
-                this.setState({
-                    userInvestments: json.userInvestments
-                });
-            }
-            else { console.log('Update User Investments - Invalid Server Response'); }
-        }
-        catch (err) {
-            console.log(err);
-        }
-        this.props.appState.onLoadingChange(false);
-    }
-
-    onTopToggle = (e) => {
-        const toggleTarget = e.target.getAttribute("toggle-target")
-        if (this.state.showSection === toggleTarget) {
+    handleTopToggle = (value) => {
+        if (this.state.showSection === value) {
             this.setState({ showSection: null });
         }
         else {
-            this.setState({ showSection: toggleTarget });
+            this.setState({ showSection: value });
         }
     }
 
@@ -159,111 +145,6 @@ export default class Portfolio extends React.Component {
         this.setState({
             selectedSecurity: symbol
         })
-    }
-
-    onAddManualInvestmentClick = async (e) => {
-        try {
-            const data = {investment_id: e.currentTarget.getAttribute("id"), shares: 50, basis: 100 };
-            this.props.appState.onStatusMessageChange(false, '');
-            this.props.appState.onLoadingChange(true);
-            const response = await fetch(`./portfolios/${this.props.match.params.id}/addholding`, {
-                method: "POST",
-                body: JSON.stringify(data),
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-            if (response.status === 200) {
-                const json = await response.json();
-                if (json.success) {
-                    await this.updateHoldings();
-                }
-                else {
-                    this.props.appState.onLoadingChange(false);
-                }
-                this.props.appState.onStatusMessageChange(true, json.message);
-            }
-            else {
-                console.log('Add Holding - Invalid Server Response');
-                this.props.appState.onLoadingChange(false);
-                this.props.appState.onStatusMessageChange(true, 'The requested investment was not able to be added.');
-            }
-        }
-        catch (err) {
-            console.log(err);
-        }
-    }
-
-    onCreateInvestmentClick = async (e) => {
-        e.preventDefault();
-        try {
-            const data = this.state['newInvestment'];
-            this.props.appState.onStatusMessageChange(false, '');
-            this.props.appState.onLoadingChange(true);
-            const response = await fetch(`./portfolios/${this.props.match.params.id}/addinvestment`, {
-                method: "POST",
-                body: JSON.stringify(data),
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-            if (response.status === 200) {
-                const json = await response.json();
-                if (json.success) {
-                    this.setState({ newInvestment: { ticker: "", shares: "", basis: "" } });
-                    await this.updateHoldings();
-                    this.setState({ showSection: null });
-                }
-                else {
-                    this.props.appState.onLoadingChange(false);
-                }
-                this.props.appState.onStatusMessageChange(true, json.message);
-            }
-            else {
-                console.log('Add Ticker - Invalid Server Response');
-                this.props.appState.onLoadingChange(false);
-                this.props.appState.onStatusMessageChange(true, 'The requested investment was not able to be added.');
-            }
-        }
-        catch (err) {
-            console.log(err);
-        }
-    }
-
-    onCreateManualInvestmentClick = async (e) => {
-        e.preventDefault();
-        try {
-            const data = this.state['newManualInvestment'];
-            this.props.appState.onStatusMessageChange(false, '');
-            this.props.appState.onLoadingChange(true);
-            const response = await fetch(`./user/investments/add`, {
-                method: "POST",
-                body: JSON.stringify(data),
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-            if (response.status === 200) {
-                const json = await response.json();
-                if (json.success) {
-                    this.setState({ newManualInvestment: { manualName: "", manualPrice: "" } });
-                    await this.updateUserInvestments();
-                    this.setState({ showSection: null });
-                }
-                else {
-                    this.props.appState.onLoadingChange(false);
-                }
-                this.props.appState.onStatusMessageChange(true, json.message);
-            }
-            else {
-                console.log('Add Manual Investment - Invalid Server Response');
-                this.props.appState.onLoadingChange(false);
-                this.props.appState.onStatusMessageChange(true, 'The requested manual investment was not able to be added.');
-            }
-        }
-        catch (err) {
-            console.log(err);
-        }
     }
 
     formatter = (loc, settings) => {
@@ -282,27 +163,6 @@ export default class Portfolio extends React.Component {
         else {
             return (<pre style={{ color: 'black' }}>{this.percentFormater(value)}</pre>)
         }
-    }
-
-    createUserInvestmentRows = () => {
-        return this.state.userInvestments.map((userInvestment) => {
-            return (
-                <tr key={userInvestment.investment_id}>
-                    <td>{userInvestment.investment_name}</td>
-                    <td>{this.decimalFormater(userInvestment.current_price)}</td>
-                    <td>{new Intl.DateTimeFormat('en-US').format(new Date(userInvestment.date_updated))}</td>
-                    <td>
-                        <span className="icon-wrapper">
-                            <IoIosAdd onClick={this.onAddManualInvestmentClick} id={userInvestment.investment_id}></IoIosAdd>
-                        </span>
-                        <span> | </span>
-                        <span className="icon-wrapper"><IoMdCreate></IoMdCreate></span>
-                        <span> | </span>
-                        <span className="icon-wrapper"><IoIosClose></IoIosClose></span>
-                    </td>
-                </tr>
-            )
-        });
     }
 
     createHoldingsRows = () => {
@@ -351,149 +211,6 @@ export default class Portfolio extends React.Component {
         </tr>);
     }
 
-    renderAddInvestmentSection = () => {
-        return (<Card>
-            <CardHeader>
-                <h2 className="mb-0">
-                    <span onClick={this.onTopToggle} toggle-target="Manage" className="btn btn-link" style={{ width: '100%', textAlign: 'left' }}>
-                        Add Investment By Ticker
-                    </span>
-                </h2>
-            </CardHeader>
-            <Collapse isOpen={this.state.showSection === "Manage"}>
-                <CardBody>
-                    <div>
-                        <Form inline onSubmit={this.onCreateInvestmentClick}>
-                            <FormGroup className="mb-2 mr-sm-2 mb-sm-0">
-                                <Label for="addTicker" className="mr-sm-2">Ticker</Label>
-                                <Input type="text"
-                                    name="ticker"
-                                    id="addTicker"
-                                    placeholder="Ticker"
-                                    stateobject="newInvestment"
-                                    onChange={this.handleOnChange}
-                                    value={this.state.newInvestment.ticker}
-                                    required />
-                            </FormGroup>
-                            <FormGroup className="mb-2 mr-sm-2 mb-sm-0">
-                                <Label for="addShares" className="mr-sm-2">Shares</Label>
-                                <Input
-                                    type="number"
-                                    step="any"
-                                    name="shares"
-                                    id="addShares"
-                                    placeholder="# of Shares"
-                                    stateobject="newInvestment"
-                                    onChange={this.handleOnChange}
-                                    value={this.state.newInvestment.shares}
-                                    required />
-                            </FormGroup>
-                            <FormGroup className="mb-2 mr-sm-2 mb-sm-0">
-                                <Label for="addBasis" className="mr-sm-2">Avg. Stock Basis</Label>
-                                <Input
-                                    type="number"
-                                    step="any"
-                                    name="basis"
-                                    id="addBasis"
-                                    placeholder="Basis"
-                                    stateobject="newInvestment"
-                                    onChange={this.handleOnChange}
-                                    value={this.state.newInvestment.basis}
-                                    required />
-                            </FormGroup>
-                            <Button color="primary">Submit</Button>
-                        </Form>
-                    </div>
-                </CardBody>
-            </Collapse>
-        </Card>);
-    }
-
-    renderManageManualInvestment = () => {
-        return (<Card>
-            <CardHeader>
-                <h2 className="mb-0">
-                    <span onClick={this.onTopToggle} toggle-target="Add" className="btn btn-link" style={{ width: '80%', textAlign: 'left' }}>
-                        Manage Manual Investments
-                    </span>
-                </h2>
-            </CardHeader>
-            <Collapse isOpen={this.state.showSection === "Add"}>
-                <CardBody>
-                    <div>
-                        <Form inline onSubmit={this.onCreateManualInvestmentClick}>
-                            <FormGroup className="mb-2 mr-sm-2 mb-sm-0">
-                                <Label for="addManualName" className="mr-sm-2">Investment Name</Label>
-                                <Input type="text"
-                                    name="manualName"
-                                    id="addManualName"
-                                    placeholder="Investment Name"
-                                    stateobject="newManualInvestment"
-                                    onChange={this.handleOnChange}
-                                    value={this.state.newManualInvestment.manualName}
-                                    required />
-                            </FormGroup>
-                            <FormGroup className="mb-2 mr-sm-2 mb-sm-0">
-                                <Label for="addManualPrice" className="mr-sm-2">Current Price</Label>
-                                <Input
-                                    type="number"
-                                    step="any"
-                                    name="manualPrice"
-                                    id="addManualPrice"
-                                    placeholder="Current Price"
-                                    stateobject="newManualInvestment"
-                                    onChange={this.handleOnChange}
-                                    value={this.state.newManualInvestment.manualPrice}
-                                    required />
-                            </FormGroup>
-                            <Button color="primary">Submit</Button>
-                        </Form>
-                        {/* <Button color="primary" onClick={this.toggleManualInvestmentModal}>Add New Manual Investment</Button> */}
-                        <div className={"mt-2"}>
-                            <pre>Manual Investment Actions: <IoIosAdd></IoIosAdd> - Add To Portfolio || <IoMdCreate></IoMdCreate> - Edit Manual Investment || <IoIosClose></IoIosClose> - Delete (From All Portfolios)</pre>
-                        </div>
-                        <Table responsive hover>
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Current Price</th>
-                                    <th>Date Updated</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {this.createUserInvestmentRows()}
-                            </tbody>
-                        </Table>
-                    </div>
-                </CardBody>
-            </Collapse>
-        </Card>);
-    }
-
-    toggleManualInvestmentModal = () => {
-        this.setState(prevState => ({
-            manualModal: !prevState.manualModal
-        }));
-    }
-
-    renderManualInvestmentModal = () => {
-        return (
-            <div>
-                <Modal isOpen={this.state.manualModal} toggle={this.toggleManualInvestmentModal}>
-                    <ModalHeader toggle={this.toggleManualInvestmentModal}>Modal title</ModalHeader>
-                    <ModalBody>
-                        Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-                </ModalBody>
-                    <ModalFooter>
-                        <Button color="primary" onClick={this.toggleManualInvestmentModal}>Do Something</Button>{' '}
-                        <Button color="secondary" onClick={this.toggleManualInvestmentModal}>Cancel</Button>
-                    </ModalFooter>
-                </Modal>
-            </div>
-        );
-    }
-
     render() {
         if (!this.props.appState.state.userDetail.loggedIn) {
             return (<div className="card mt-3">
@@ -512,9 +229,21 @@ export default class Portfolio extends React.Component {
             return (
                 <div>
                     <div className="accordion mt-3 pb-3" id="portfolioAccordian">
-                        {this.renderAddInvestmentSection()}
-                        {this.renderManageManualInvestment()}
+                        <AddInvestment showSection={this.state.showSection === "Manage"}
+                            onToggle={this.handleTopToggle}
+                            runUpdates={this.updateHoldings}
+                            {...this.props}></AddInvestment>
+                        <ManageManualInvestments showSection={this.state.showSection === "Add"}
+                            onToggle={this.handleTopToggle}
+                            runUpdates={this.updateHoldings}
+                            {...this.props}></ManageManualInvestments>
                     </div>
+                    <PortfolioSummary {...this.props}
+                        sector={this.state.currentSector}
+                        asset={this.state.currentAsset}
+                        update={this.handleSummaryFilter}
+                        holdings={this.state.holdings}>
+                    </PortfolioSummary>
                     <TickerDetail {...this.props} ticker={this.state.selectedSecurity}></TickerDetail>
                     <div className={"mt-2"}>
                         <pre>Portfolio Actions: <IoMdCreate></IoMdCreate> - Edit || <IoIosClose></IoIosClose> - Delete || <IoIosListBox></IoIosListBox> - Show Details</pre>
@@ -539,7 +268,6 @@ export default class Portfolio extends React.Component {
                             {this.createHoldingsTotal()}
                         </tbody>
                     </Table>
-                    {this.renderManualInvestmentModal()}
                 </div>)
         }
     }

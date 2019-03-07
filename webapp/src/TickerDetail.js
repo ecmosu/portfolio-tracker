@@ -4,6 +4,7 @@ export default class TickerDetail extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
+            show: true,
             isLoaded: false,
             quoteResult: []
         };
@@ -23,9 +24,6 @@ export default class TickerDetail extends React.Component {
                         });
                         this.props.appState.onLoadingChange(false);
                     },
-                    // Note: it's important to handle errors here
-                    // instead of a catch() block so that we don't swallow
-                    // exceptions from actual bugs in components.
                     (error) => {
                         this.props.appState.onLoadingChange(false);
                     }
@@ -39,12 +37,17 @@ export default class TickerDetail extends React.Component {
         });
     }
 
+    closeDetail = () => {
+        this.setState({show: false});
+    }
+
     componentDidMount() {
         this.updateTickerResults();
     }
 
     componentDidUpdate(prevProps) {
         if (prevProps.ticker !== this.props.ticker) {
+            this.setState({show: true});
             this.updateTickerResults();
         }
     }
@@ -55,13 +58,16 @@ export default class TickerDetail extends React.Component {
         const percentFormater = this.formatter('en-US', { style: "percent", maximumFractionDigits: 2 });
         const distanceFromHigh = (quoteResult.latestPrice - quoteResult.week52High);
         const percentChange = (distanceFromHigh / quoteResult.week52High);
-        if (this.props.ticker === "" || !this.state.isLoaded) { return null }
+        if (this.props.ticker === "" || !this.state.show || !this.state.isLoaded) { return null }
         else {
             return (
                 <div>
                     <div className="card">
                         <div className="card-body">
-                            <h1 className="card-title">{quoteResult.companyName}</h1>
+                            <h1 className="card-title">
+                                {quoteResult.companyName}
+                                <button type="button" className="close" onClick={this.closeDetail} aria-label="Close"><span aria-hidden="true">×</span></button>
+                            </h1>
                             <h4 className="card-subtitle mb-2 text-muted">Security Detail</h4>
                             <dl className="row">
                                 <dt className="col-3">

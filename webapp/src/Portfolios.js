@@ -63,7 +63,7 @@ export default class Portfolios extends React.Component {
                 method: "DELETE"
             });
             if (response.status === 200) {
-
+                this.props.appState.onStatusMessageChange(true, 'Portfolio Deleted Successfully');
             }
             else { console.log('Delete Portfolio - Invalid Server Response'); }
         }
