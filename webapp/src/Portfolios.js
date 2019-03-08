@@ -40,13 +40,6 @@ export default class Portfolios extends React.Component {
                 });
             }
             else { console.log('Update Portfolios - Invalid Server Response'); }
-            // this.setState({
-            //     portfolios: [
-            //         { portfolio_id: 1, portfolio_name: "401K" },
-            //         { portfolio_id: 2, portfolio_name: "Roth" },
-            //         { portfolio_id: 3, portfolio_name: "Taxable" }
-            //     ]
-            // });
         }
         catch (err) {
             console.log(err);
@@ -130,10 +123,9 @@ export default class Portfolios extends React.Component {
                 <tr key={portfolio.portfolio_id}>
                     <td>{portfolio.portfolio_name}</td>
                     <td>
-
-                        <Link to={"/portfolios/" + portfolio.portfolio_id}><IoIosListBox></IoIosListBox></Link>
+                        <Link className="btn btn-sm btn-primary" to={"/portfolios/" + portfolio.portfolio_id}><IoIosListBox></IoIosListBox></Link>
                         <span> |  </span>
-                        <span className="icon-wrapper" onClick={this.deletePortfolio} data-id={portfolio.portfolio_id}><IoIosClose></IoIosClose></span>
+                        <Button color="primary" size="sm" onClick={this.deletePortfolio} data-id={portfolio.portfolio_id}><IoIosClose></IoIosClose></Button>
                     </td>
                 </tr>
             )

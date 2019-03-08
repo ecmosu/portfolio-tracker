@@ -32,9 +32,10 @@ export default class PortfolioSummary extends React.PureComponent {
             <Col xs="6">
                 <div>
                     <svg viewBox="0 0 800 400">
-                        <VictoryLabel x={400} y={20} textAnchor="middle" style={{ fontSize: 30 }} text="Sector Allocation" />
+                        <VictoryLabel x={400} y={20} textAnchor="middle" style={{ fontSize: 30 }} text="Sector Allocations" />
                         <VictoryPie
-                            width={800} height={400}
+                            origin={{y: 210}}
+                            width={800} height={380}
                             events={[{
                                 target: "data",
                                 eventHandlers: {
@@ -42,7 +43,7 @@ export default class PortfolioSummary extends React.PureComponent {
                                         return [
                                             {
                                                 target: "data",
-                                                mutation: (props) => {                                                
+                                                mutation: (props) => {
                                                     this.props.update("currentSector", props.data[props.index].id);
                                                 }
                                             }
@@ -68,7 +69,8 @@ export default class PortfolioSummary extends React.PureComponent {
                     <svg viewBox="0 0 800 400">
                         <VictoryLabel x={400} y={20} textAnchor="middle" style={{ fontSize: 30 }} text="Asset Allocations" />
                         <VictoryPie
-                            width={800} height={400}
+                            origin={{y: 210}}
+                            width={800} height={380}
                             events={[{
                                 target: "data",
                                 eventHandlers: {
@@ -76,7 +78,7 @@ export default class PortfolioSummary extends React.PureComponent {
                                         return [
                                             {
                                                 target: "data",
-                                                mutation: (props) => {                                                
+                                                mutation: (props) => {
                                                     this.props.update("currentAsset", props.data[props.index].id);
                                                 }
                                             }

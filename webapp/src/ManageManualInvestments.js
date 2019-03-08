@@ -1,7 +1,7 @@
 import React from 'react';
 import { IoIosClose, IoIosAdd, IoMdCreate } from 'react-icons/io';
 import {
-    Form, FormGroup, Button, Card, CardBody, CardHeader, Collapse,
+    Col, Form, FormGroup, Button, Card, CardBody, CardHeader, Collapse,
     Input, Label, Table, Modal, ModalHeader, ModalBody, ModalFooter
 } from 'reactstrap';
 
@@ -13,7 +13,8 @@ export default class ManageManualInvestments extends React.Component {
             userInvestments: [],
             newManualInvestment: { name: "", price: "", sector: "" },
             currentModal: "",
-            addModal: {investment_id: "", basis: "", shares: ""},
+            addModal: { investment_id: "", basis: "", shares: "" },
+            editModal: { investment_id: "", investment_name: "", sector_name: "", current_price: "", date_updated: "" },
             deleteModal: { id: "" }
         }
 
@@ -87,6 +88,13 @@ export default class ManageManualInvestments extends React.Component {
         this.props.appState.onLoadingChange(false);
     }
 
+    createSectorOptions() {
+        const sectorOptions = this.state.sectors.map((sector) => {
+            return (<option key={sector.sector_id}>{sector.sector_name}</option>)
+        });
+        return sectorOptions;
+    }
+
     onCreateManualInvestmentClick = async (e) => {
         e.preventDefault();
         try {
@@ -123,7 +131,7 @@ export default class ManageManualInvestments extends React.Component {
         }
     }
 
-    onDeletePortfolioConfirmClick = async () => {
+    onDeleteInvestmentConfirmClick = async () => {
         try {
             const investmentId = this.state.deleteModal.id;
             this.setState({
@@ -138,7 +146,8 @@ export default class ManageManualInvestments extends React.Component {
             if (response.status === 200) {
                 const json = await response.json();
                 if (json.success) {
-                    await this.updateUserInvestments()
+                    await this.props.runUpdates();
+                    await this.updateUserInvestments();
                 }
                 else {
                     this.props.appState.onLoadingChange(false);
@@ -155,9 +164,58 @@ export default class ManageManualInvestments extends React.Component {
         }
     }
 
-    onAddManualInvestmentClick = async (e) => {
+    createUserInvestmentRows = () => {
+        return this.state.userInvestments.map((userInvestment) => {
+            return (
+                <tr key={userInvestment.investment_id}>
+                    <td>{userInvestment.investment_name}</td>
+                    <td>{userInvestment.sector_name}</td>
+                    <td>{this.decimalFormater(userInvestment.current_price)}</td>
+                    <td>{new Intl.DateTimeFormat('en-US').format(new Date(userInvestment.date_updated))}</td>
+                    <td>
+                        <pre>
+                            <Button className="icon-button" color="primary" size="sm" onClick={this.toggleAddInvestmentModal} add-id={userInvestment.investment_id}>
+                                <IoIosAdd></IoIosAdd>
+                            </Button>
+                            <span> | </span>
+                            <Button className="icon-button" color="primary" size="sm" onClick={this.toggleEditInvestmentModal} edit-id={userInvestment.investment_id}>
+                                <IoMdCreate></IoMdCreate>
+                            </Button>
+                            <span> | </span>
+                            <Button className="icon-button" color="primary" size="sm" onClick={this.toggleDeleteInvestmentModal} delete-id={userInvestment.investment_id}>
+                                <IoIosClose></IoIosClose>
+                            </Button>
+                        </pre>
+                    </td>
+                </tr>
+            )
+        });
+    }
+
+    toggleAddInvestmentModal = (e) => {
+        if (this.state.currentModal === "AddModal") {
+            this.setState({
+                addModal: { investment_id: "", basis: "", shares: "" },
+                currentModal: "",
+            });
+        }
+        else {
+            const toggleTarget = e.target.getAttribute("add-id");
+            this.setState({
+                addModal: { investment_id: toggleTarget, basis: "", shares: "" },
+                currentModal: "AddModal",
+            });
+        }
+    }
+
+    onAddManualInvestmentSubmit = async (e) => {
+        e.preventDefault();
         try {
-            const data = { investment_id: e.currentTarget.getAttribute("id"), shares: 50, basis: 100 };
+            const data = { ...this.state.addModal };
+            this.setState({
+                addModal: { investment_id: "", basis: "", shares: "" },
+                currentModal: "",
+            });
             this.props.appState.onStatusMessageChange(false, '');
             this.props.appState.onLoadingChange(true);
             const response = await fetch(`./portfolios/${this.props.match.params.id}/addholding`, {
@@ -188,64 +246,53 @@ export default class ManageManualInvestments extends React.Component {
         }
     }
 
-    createUserInvestmentRows = () => {
-        return this.state.userInvestments.map((userInvestment) => {
-            return (
-                <tr key={userInvestment.investment_id}>
-                    <td>{userInvestment.investment_name}</td>
-                    <td>{userInvestment.sector_name}</td>
-                    <td>{this.decimalFormater(userInvestment.current_price)}</td>
-                    <td>{new Intl.DateTimeFormat('en-US').format(new Date(userInvestment.date_updated))}</td>
-                    <td>
-                        <span className="icon-wrapper">
-                            <IoIosAdd onClick={this.toggleAddInvestmentModal} add-id={userInvestment.investment_id}></IoIosAdd>
-                        </span>
-                        <span> | </span>
-                        <span className="icon-wrapper">
-                            <IoMdCreate onClick={this.toggleEditInvestmentModal} edit-id={userInvestment.investment_id}></IoMdCreate>
-                        </span>
-                        <span> | </span>
-                        <span className="icon-wrapper">
-                            <IoIosClose onClick={this.toggleDeleteInvestmentModal} delete-id={userInvestment.investment_id}></IoIosClose>
-                        </span>
-                    </td>
-                </tr>
-            )
-        });
-    }
-
-    toggleAddInvestmentModal = (e) => {
-        if (this.state.currentModal === "AddModal") {
-            this.setState({
-                addModal: {investment_id: "", basis: "", shares: ""},
-                currentModal: "",
-            });
-        }
-        else {
-            const toggleTarget = e.target.getAttribute("add-id");
-                this.setState({
-                    addModal: {investment_id: toggleTarget, basis: "", shares: ""},
-                    currentModal: "AddModal",
-                });
-        }
-        //this.onAddManualInvestmentClick
-    }
-
     renderAddInvestmentModal = () => {
         return (
             <div>
                 <Modal isOpen={this.state.currentModal === "AddModal"} toggle={this.toggleAddInvestmentModal}>
-                    <ModalHeader toggle={this.toggleAddInvestmentModal}>Add Investment</ModalHeader>
-                    <ModalBody>
-                        {this.state.addModal.sector_name}
-                        Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-                    </ModalBody>
-                    <ModalFooter>
-                        <Button color="primary" onClick={this.toggleAddInvestmentModal}>Create</Button>{' '}
-                        <Button color="secondary" onClick={this.toggleAddInvestmentModal}>Cancel</Button>
-                    </ModalFooter>
+                    <Form onSubmit={this.onAddManualInvestmentSubmit}>
+                        <ModalHeader toggle={this.toggleAddInvestmentModal}>Add Investment</ModalHeader>
+                        <ModalBody>
+                            <FormGroup row>
+                                <Label for="modalAddShares" sm={2}>Shares</Label>
+                                <Col sm={10}>
+                                    <Input
+                                        type="number"
+                                        step="any"
+                                        min="0"
+                                        name="shares"
+                                        id="modalAddShares"
+                                        placeholder="# of Shares"
+                                        stateobject="addModal"
+                                        onChange={this.handleOnChange}
+                                        value={this.state.addModal.shares}
+                                        required />
+                                </Col>
+                            </FormGroup>
+                            <FormGroup row>
+                                <Label for="modalAddBasis" sm={2}>Basis</Label>
+                                <Col sm={10}>
+                                    <Input
+                                        type="number"
+                                        step="any"
+                                        min="0"
+                                        name="basis"
+                                        id="modalAddBasis"
+                                        placeholder="Stock Basis"
+                                        stateobject="addModal"
+                                        onChange={this.handleOnChange}
+                                        value={this.state.addModal.basis}
+                                        required />
+                                </Col>
+                            </FormGroup>
+                        </ModalBody>
+                        <ModalFooter>
+                            <Button type="submit" color="primary">Create</Button>{' '}
+                            <Button color="secondary" onClick={this.toggleAddInvestmentModal}>Cancel</Button>
+                        </ModalFooter>
+                    </Form>
                 </Modal>
-            </div>
+            </div >
         );
     }
 
@@ -268,19 +315,104 @@ export default class ManageManualInvestments extends React.Component {
         }
     }
 
+    onEditManualInvestmentSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const data = { ...this.state.editModal };
+            console.log(data);
+            this.setState({
+                editModal: { investment_id: "", basis: "", shares: "" },
+                currentModal: "",
+            });
+            this.props.appState.onStatusMessageChange(false, '');
+            this.props.appState.onLoadingChange(true);
+            const response = await fetch(`./user/investments/edit`, {
+                method: "POST",
+                body: JSON.stringify(data),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (response.status === 200) {
+                const json = await response.json();
+                if (json.success) {
+                    await this.props.runUpdates();
+                    await this.updateUserInvestments();
+                }
+                else {
+                    this.props.appState.onLoadingChange(false);
+                }
+                this.props.appState.onStatusMessageChange(true, json.message);
+            }
+            else {
+                console.log('Edit User Investment - Invalid Server Response');
+                this.props.appState.onLoadingChange(false);
+                this.props.appState.onStatusMessageChange(true, 'The requested investment was not able to be updated.');
+            }
+        }
+        catch (err) {
+            console.log(err);
+        }
+    }
+
     renderEditInvestmentModal = () => {
         return (
             <div>
                 <Modal isOpen={this.state.currentModal === "EditModal"} toggle={this.toggleEditInvestmentModal}>
-                    <ModalHeader toggle={this.toggleEditInvestmentModal}>Edit Investment</ModalHeader>
-                    <ModalBody>
-                    {this.state.editModal.sector_name}
-                        Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-                    </ModalBody>
-                    <ModalFooter>
-                        <Button color="primary" onClick={this.toggleEditInvestmentModal}>Edit</Button>{' '}
-                        <Button color="secondary" onClick={this.toggleEditInvestmentModal}>Cancel</Button>
-                    </ModalFooter>
+                    <Form onSubmit={this.onEditManualInvestmentSubmit}>
+                        <ModalHeader toggle={this.toggleEditInvestmentModal}>Edit Investment</ModalHeader>
+                        <ModalBody>
+                            <FormGroup row>
+                                <Label for="modalEditName" sm={2}>Investment Name</Label>
+                                <Col sm={10}>
+                                    <Input
+                                        type="text"
+                                        name="investment_name"
+                                        id="modalEditName"
+                                        placeholder="Investment Name"
+                                        stateobject="editModal"
+                                        onChange={this.handleOnChange}
+                                        value={this.state.editModal.investment_name}
+                                        required />
+                                </Col>
+                            </FormGroup>
+                            <FormGroup row>
+                                <Label for="modalEditSector" sm={2}>Sector</Label>
+                                <Col sm={10}>
+                                    <Input
+                                        type="select"
+                                        name="sector_name"
+                                        id="modalEditSector"
+                                        stateobject="editModal"
+                                        onChange={this.handleOnChange}
+                                        value={this.state.editModal.sector_name}>
+                                        <option></option>
+                                        {this.createSectorOptions()}
+                                    </Input>
+                                </Col>
+                            </FormGroup>
+                            <FormGroup row>
+                                <Label for="modalEditPrice" sm={2}>Current Price</Label>
+                                <Col sm={10}>
+                                    <Input
+                                        type="number"
+                                        step="any"
+                                        min="0"
+                                        name="current_price"
+                                        id="modalEditPrice"
+                                        placeholder="Current Price"
+                                        stateobject="editModal"
+                                        onChange={this.handleOnChange}
+                                        value={this.state.editModal.current_price}
+                                        required />
+                                </Col>
+                            </FormGroup>
+                        </ModalBody>
+                        <ModalFooter>
+                            <Button type="submit" color="primary">Edit</Button>{' '}
+                            <Button color="secondary" onClick={this.toggleEditInvestmentModal}>Cancel</Button>
+                        </ModalFooter>
+                    </Form>
                 </Modal>
             </div>
         );
@@ -311,7 +443,7 @@ export default class ManageManualInvestments extends React.Component {
                         Are you sure you would like to delete this investment?  It will be removed from all portfolios in which it currently exists.
                     </ModalBody>
                     <ModalFooter>
-                        <Button color="primary" onClick={this.onDeletePortfolioConfirmClick}>Delete</Button>{' '}
+                        <Button color="primary" onClick={this.onDeleteInvestmentConfirmClick}>Delete</Button>{' '}
                         <Button color="secondary" onClick={this.toggleDeleteInvestmentModal}>Cancel</Button>
                     </ModalFooter>
                 </Modal>
@@ -324,7 +456,7 @@ export default class ManageManualInvestments extends React.Component {
             case "AddModal":
                 return this.renderAddInvestmentModal();
             case "EditModal":
-                return this.rednderEditInvestmentModal();
+                return this.renderEditInvestmentModal();
             case "DeleteModal":
                 return this.renderDeleteInvestmentModal();
             default:
@@ -333,9 +465,6 @@ export default class ManageManualInvestments extends React.Component {
     }
 
     render() {
-        const sectorOptions = this.state.sectors.map((sector) => {
-            return (<option key={sector.sector_id}>{sector.sector_name}</option>)
-        });
         return (<Card>
             <CardHeader>
                 <h2 className="mb-0">
@@ -370,7 +499,7 @@ export default class ManageManualInvestments extends React.Component {
                                     onChange={this.handleOnChange}
                                     value={this.state.newManualInvestment.sector}>
                                     <option></option>
-                                    {sectorOptions}
+                                    {this.createSectorOptions()}
                                 </Input>
                             </FormGroup>
                             <FormGroup className="mb-2 mr-sm-2 mb-sm-0">
@@ -378,6 +507,7 @@ export default class ManageManualInvestments extends React.Component {
                                 <Input
                                     type="number"
                                     step="any"
+                                    min="0"
                                     name="price"
                                     id="addManualPrice"
                                     placeholder="Current Price"

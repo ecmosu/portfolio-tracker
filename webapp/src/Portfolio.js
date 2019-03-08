@@ -1,6 +1,8 @@
 import React from 'react';
 import { IoIosTrendingUp, IoIosListBox, IoIosTrendingDown, IoIosClose, IoMdCreate } from 'react-icons/io';
-import { Table } from 'reactstrap';
+import {
+    Col, Form, FormGroup, Button, Input, Label, Table, Modal, ModalHeader, ModalBody, ModalFooter
+} from 'reactstrap';
 import TickerDetail from './TickerDetail';
 import PortfolioSummary from './PortfolioSummary';
 import PortfolioEntry from './PortfolioEntry';
@@ -19,10 +21,13 @@ export default class Portfolio extends React.Component {
 
         this.state = {
             showSection: true,
-            selectedSecurity: "",
+            selectedSecurity: { investment_id: "", symbol: "", investmenttype_name: "", sector_name: ""},
             currentSector: "",
             currentAsset: "",
-            holdings: []
+            holdings: [],
+            editModal: { investment_id: "", basis: "", shares: "" },
+            deleteModal: { investment_id: "" },
+            currentModal: ""
         };
 
         this.decimalFormater = this.formatter('en-US', { maximumFractionDigits: 2 });
@@ -92,7 +97,7 @@ export default class Portfolio extends React.Component {
 
     handleSummaryFilter = (key, value) => {
         if (this.state[key] === value) {
-            this.setState({[key]: ""}, this.updateHoldings);
+            this.setState({ [key]: "" }, this.updateHoldings);
         }
         else {
             this.setState({ [key]: value }, this.updateHoldings);
@@ -141,10 +146,14 @@ export default class Portfolio extends React.Component {
     }
 
     onSecuritySelect = (e) => {
-        const symbol = e.currentTarget.getAttribute("symbol");
-        this.setState({
-            selectedSecurity: symbol
-        })
+        const investmentId = e.currentTarget.getAttribute("investment-id");
+        const targetIndex = this.state.holdings.findIndex(item => Number(item.investment_id) === Number(investmentId));
+        if (targetIndex > -1) {
+            const targetHolding = { ...this.state.holdings[targetIndex] }
+            this.setState({
+                selectedSecurity: targetHolding
+            });
+        }
     }
 
     formatter = (loc, settings) => {
@@ -165,9 +174,200 @@ export default class Portfolio extends React.Component {
         }
     }
 
+    toggleEditInvestmentModal = (e) => {
+        if (this.state.currentModal === "EditModal") {
+            this.setState({
+                editModal: { investment_id: "", basis: "", shares: "" },
+                currentModal: "",
+            });
+        }
+        else {
+            const toggleTarget = e.target.getAttribute("edit-id");
+            const targetIndex = this.state.holdings.findIndex(item => Number(item.investment_id) === Number(toggleTarget));
+            if (targetIndex > -1) {
+                const targetHolding = { ...this.state.holdings[targetIndex] }
+                this.setState({
+                    editModal: { investment_id: targetHolding.investment_id, basis: targetHolding.average_cost_basis, shares: targetHolding.number_shares },
+                    currentModal: "EditModal",
+                });
+            }
+        }
+    }
+
+    onEditHoldingSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const data = { ...this.state.editModal };
+            console.log(data);
+            this.setState({
+                editModal: { investment_id: "", basis: "", shares: "" },
+                currentModal: "",
+            });
+            this.props.appState.onStatusMessageChange(false, '');
+            this.props.appState.onLoadingChange(true);
+            const response = await fetch(`./portfolios/${this.props.match.params.id}/holding/${data.investment_id}`, {
+                method: "POST",
+                body: JSON.stringify(data),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (response.status === 200) {
+                const json = await response.json();
+                if (json.success) {
+                    await this.updateHoldings();
+                }
+                else {
+                    this.props.appState.onLoadingChange(false);
+                }
+                this.props.appState.onStatusMessageChange(true, json.message);
+            }
+            else {
+                console.log('Edit Holding - Invalid Server Response');
+                this.props.appState.onLoadingChange(false);
+                this.props.appState.onStatusMessageChange(true, 'The requested holding was not able to be updated.');
+            }
+        }
+        catch (err) {
+            console.log(err);
+        }
+    }
+
+    renderEditInvestmentModal = () => {
+        return (
+            <div>
+                <Modal isOpen={this.state.currentModal === "EditModal"} toggle={this.toggleEditInvestmentModal}>
+                    <Form onSubmit={this.onEditHoldingSubmit}>
+                        <ModalHeader toggle={this.toggleEditInvestmentModal}>Edit Holding</ModalHeader>
+                        <ModalBody>
+                            <FormGroup row>
+                                <Label for="modalEditShares" sm={2}>Shares</Label>
+                                <Col sm={10}>
+                                    <Input
+                                        type="number"
+                                        step="any"
+                                        min="0"
+                                        name="shares"
+                                        id="modalEditShares"
+                                        placeholder="# of Shares"
+                                        stateobject="editModal"
+                                        onChange={this.handleOnChange}
+                                        value={this.state.editModal.shares}
+                                        required />
+                                </Col>
+                            </FormGroup>
+                            <FormGroup row>
+                                <Label for="modalEditBasis" sm={2}>Basis</Label>
+                                <Col sm={10}>
+                                    <Input
+                                        type="number"
+                                        step="any"
+                                        min="0"
+                                        name="basis"
+                                        id="modalEditBasis"
+                                        placeholder="Stock Basis"
+                                        stateobject="editModal"
+                                        onChange={this.handleOnChange}
+                                        value={this.state.editModal.basis}
+                                        required />
+                                </Col>
+                            </FormGroup>
+                        </ModalBody>
+                        <ModalFooter>
+                            <Button type="submit" color="primary">Edit</Button>{' '}
+                            <Button color="secondary" onClick={this.toggleEditInvestmentModal}>Cancel</Button>
+                        </ModalFooter>
+                    </Form>
+                </Modal>
+            </div>
+        );
+    }
+
+    toggleDeleteInvestmentModal = (e) => {
+        if (this.state.currentModal === "DeleteModal") {
+            this.setState({
+                deleteModal: { investment_id: "" },
+                currentModal: "",
+            });
+        }
+        else {
+            const toggleTarget = e.target.getAttribute("delete-id");
+            this.setState(prevState => ({
+                deleteModal: { investment_id: toggleTarget },
+                currentModal: "DeleteModal",
+            }));
+        }
+    }
+
+    onDeleteHoldingConfirmClick = async () => {
+        try {
+            const investmentId = this.state.deleteModal.investment_id;
+            this.setState({
+                deleteModal: { investment_id: "" },
+                currentModal: "",
+            });
+            this.props.appState.onStatusMessageChange(false, '');
+            this.props.appState.onLoadingChange(true);
+            const response = await fetch(`./portfolios/${this.props.match.params.id}/holding/${investmentId}`, {
+                method: "DELETE"
+            });
+            if (response.status === 200) {
+                const json = await response.json();
+                if (json.success) {
+                    await this.updateHoldings();
+                }
+                else {
+                    this.props.appState.onLoadingChange(false);
+                }
+                this.props.appState.onStatusMessageChange(true, json.message);
+            }
+            else {
+                this.props.appState.onLoadingChange(false);
+                this.props.appState.onStatusMessageChange(true, 'The requested delete action was not able to be processed.');
+            }
+        }
+        catch (err) {
+            console.log(err);
+        }
+    }
+
+    renderDeleteInvestmentModal = () => {
+        return (
+            <div>
+                <Modal isOpen={this.state.currentModal === "DeleteModal"} toggle={this.toggleDeleteInvestmentModal}>
+                    <ModalHeader toggle={this.toggleDeleteInvestmentModal}>Delete Holding</ModalHeader>
+                    <ModalBody>
+                        Are you sure you would like to delete this holding?
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button color="primary" onClick={this.onDeleteHoldingConfirmClick}>Delete</Button>{' '}
+                        <Button color="secondary" onClick={this.toggleDeleteInvestmentModal}>Cancel</Button>
+                    </ModalFooter>
+                </Modal>
+            </div>
+        );
+    }
+
+    renderModal = () => {
+        switch (this.state.currentModal) {
+            case "EditModal":
+                return this.renderEditInvestmentModal();
+            case "DeleteModal":
+                return this.renderDeleteInvestmentModal();
+            default:
+                return null;
+        }
+    }
+
     createHoldingsRows = () => {
         return this.state.holdings.map((holding) => {
-            return <PortfolioEntry key={holding.investment_id} onSecuritySelect={this.onSecuritySelect} {...holding}></PortfolioEntry>
+            return <PortfolioEntry
+                key={holding.investment_id}
+                onSecuritySelect={this.onSecuritySelect}
+                toggleEditModal={this.toggleEditInvestmentModal}
+                toggleDeleteModal={this.toggleDeleteInvestmentModal}
+                {...holding}>
+            </PortfolioEntry>
         });
     }
 
@@ -244,7 +444,7 @@ export default class Portfolio extends React.Component {
                         update={this.handleSummaryFilter}
                         holdings={this.state.holdings}>
                     </PortfolioSummary>
-                    <TickerDetail {...this.props} ticker={this.state.selectedSecurity}></TickerDetail>
+                    <TickerDetail {...this.props} holding={this.state.selectedSecurity}></TickerDetail>
                     <div className={"mt-2"}>
                         <pre>Portfolio Actions: <IoMdCreate></IoMdCreate> - Edit || <IoIosClose></IoIosClose> - Delete || <IoIosListBox></IoIosListBox> - Show Details</pre>
                     </div>
@@ -268,6 +468,7 @@ export default class Portfolio extends React.Component {
                             {this.createHoldingsTotal()}
                         </tbody>
                     </Table>
+                    {this.renderModal()}
                 </div>)
         }
     }

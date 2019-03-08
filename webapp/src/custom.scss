@@ -106,3 +106,7 @@ tr.portfolio-holding-row td.holding-detail div.security-name {
   font-style: italic;
   font-weight: 600;
 }
+
+button.icon-button > * {
+  pointer-events: none;
+}

@@ -1,5 +1,6 @@
 import React from 'react';
 import { IoIosClose, IoIosListBox, IoMdCreate } from 'react-icons/io';
+import { Button } from 'reactstrap';
 import PortfolioColoredPercent from './PortfolioColoredPercent';
 
 export default class PortfolioEntry extends React.PureComponent {
@@ -7,6 +8,20 @@ export default class PortfolioEntry extends React.PureComponent {
         return (number => {
             return new Intl.NumberFormat(loc, settings).format(number);
         });
+    }
+
+    renderDetailButton() {
+        if (this.props.symbol === "N/A") {
+            return (null)
+        }
+        else {
+            return (
+                <pre>
+                    <Button className="icon-button" color="primary" size="sm" onClick={this.props.onSecuritySelect} investment-id={this.props.investment_id}>
+                        <IoIosListBox></IoIosListBox>
+                    </Button>
+                </pre>)
+        }
     }
 
     render() {
@@ -18,7 +33,7 @@ export default class PortfolioEntry extends React.PureComponent {
                 return new Intl.NumberFormat(loc, settings).format(number);
             });
         }
-        
+
         const decimalFormater = formatter('en-US', { maximumFractionDigits: 2 });
 
         return (
@@ -57,9 +72,9 @@ export default class PortfolioEntry extends React.PureComponent {
                 <td>
                     <div>
                         <pre>
-                            <span className="icon-wrapper"><IoMdCreate></IoMdCreate></span>
+                            <Button onClick={this.props.toggleEditModal} edit-id={this.props.investment_id} className="icon-button" color="primary" size="sm"><IoMdCreate></IoMdCreate></Button>
                             <span> | </span>
-                            <span className="icon-wrapper"><IoIosClose></IoIosClose></span>
+                            <Button onClick={this.props.toggleDeleteModal} delete-id={this.props.investment_id} className="icon-button" color="primary" size="sm"><IoIosClose></IoIosClose></Button>
                         </pre>
                     </div>
                 </td>
@@ -84,16 +99,12 @@ export default class PortfolioEntry extends React.PureComponent {
                         <PortfolioColoredPercent value={(latestPrice - latestClosingPrice) / latestClosingPrice}></PortfolioColoredPercent>
                     </div>
                     <div>
-                    <PortfolioColoredPercent value={(latestClosingPrice - totalBasis) / totalBasis}></PortfolioColoredPercent>
+                        <PortfolioColoredPercent value={(latestClosingPrice - totalBasis) / totalBasis}></PortfolioColoredPercent>
                     </div>
                 </td>
                 <td>
                     <div>
-                        <pre>
-                            <span className="icon-wrapper">
-                                <IoIosListBox onClick={this.props.onSecuritySelect} symbol={this.props.symbol}></IoIosListBox>
-                            </span>
-                        </pre>
+                        {this.renderDetailButton()}
                     </div>
                 </td>
             </tr>

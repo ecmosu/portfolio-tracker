@@ -11,10 +11,10 @@ export default class TickerDetail extends React.Component {
     }
 
     updateTickerResults() {
-        if (this.props.ticker !== "") {
+        if (this.props.holding.symbol !== "") {
             this.props.appState.onLoadingChange(true);
             this.setState({ isLoaded: false });
-            fetch(`https://api.iextrading.com/1.0/stock/${this.props.ticker}/quote`)
+            fetch(`https://api.iextrading.com/1.0/stock/${this.props.holding.symbol}/quote`)
                 .then(res => res.json())
                 .then(
                     (result) => {
@@ -46,7 +46,7 @@ export default class TickerDetail extends React.Component {
     }
 
     componentDidUpdate(prevProps) {
-        if (prevProps.ticker !== this.props.ticker) {
+        if (prevProps.holding.symbol !== this.props.holding.symbol) {
             this.setState({show: true});
             this.updateTickerResults();
         }
@@ -58,7 +58,7 @@ export default class TickerDetail extends React.Component {
         const percentFormater = this.formatter('en-US', { style: "percent", maximumFractionDigits: 2 });
         const distanceFromHigh = (quoteResult.latestPrice - quoteResult.week52High);
         const percentChange = (distanceFromHigh / quoteResult.week52High);
-        if (this.props.ticker === "" || !this.state.show || !this.state.isLoaded) { return null }
+        if (this.props.holding.symbol === "" || !this.state.show || !this.state.isLoaded) { return null }
         else {
             return (
                 <div>
@@ -116,13 +116,13 @@ export default class TickerDetail extends React.Component {
                                     Investment Type
                         </dt>
                                 <dd className="col-3">
-                                    ETF
+                                    {this.props.holding.investmenttype_name}
                                 </dd>
                                 <dt className="col-3">
                                     Sector
                             </dt>
                                 <dd className="col-3">
-                                    Fund
+                                    {this.props.holding.sector_name}
                                 </dd>
                             </dl>
                         </div>

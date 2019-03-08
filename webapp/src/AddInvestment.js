@@ -99,6 +99,7 @@ export default class AddInvestment extends React.Component {
                                     <Input
                                         type="number"
                                         step="any"
+                                        min="0"
                                         name="shares"
                                         id="addShares"
                                         placeholder="# of Shares"
@@ -112,6 +113,7 @@ export default class AddInvestment extends React.Component {
                                     <Input
                                         type="number"
                                         step="any"
+                                        min="0"
                                         name="basis"
                                         id="addBasis"
                                         placeholder="Basis"

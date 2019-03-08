@@ -155,6 +155,32 @@ app.post('/user/investments/add', async (req, res) => {
     res.send({ success: false, message: "The investment could not be added." });
 });
 
+app.post('/user/investments/edit', async (req, res) => {
+    try {
+        if (req.session && req.session.userId) {
+            const userId = req.session.userId;
+            const investment = req.body;
+
+            const sql = `UPDATE investments 
+                SET investment_name = ?, 
+                    latest_closing_price = ?, 
+                    sector_id = (SELECT sector_id FROM sectors WHERE sector_name = ? LIMIT 1),
+                    price_date = NOW()
+                WHERE investment_id = ? AND user_id = ? `
+            const results = await pool.query(sql, [investment.investment_name, investment.current_price, investment.sector_name, investment.investment_id, userId]);
+            if (results.affectedRows > 0) {
+                //Successfully Added
+                res.send({ success: true, message: "The investment was successfully updated." });
+                return;
+            }
+        }
+    }
+    catch (err) {
+        console.log(err);
+    }
+    res.send({ success: false, message: "The investment could not be updated." });
+});
+
 app.delete('/user/investments/:id', async (req, res) => {
     try {
         if (req.session && req.session.userId) {
@@ -284,6 +310,55 @@ app.post('/portfolios/:id/addinvestment', async (req, res) => {
         console.log(err);
     }
     res.send({ success: false, message: "The investment could not be added." });
+});
+
+app.delete('/portfolios/:portfolioid/holding/:investmentid', async (req, res) => {
+    try {
+        if (req.session && req.session.userId) {
+            const userId = req.session.userId;
+            const portfolioId = req.params.portfolioid;
+            const investmentId = req.params.investmentid;
+            const sql = `DELETE holdings FROM holdings
+                INNER JOIN portfolios ON holdings.portfolio_id = portfolios.portfolio_id
+                WHERE holdings.portfolio_id = ? AND investment_id = ? AND user_id = ?`;
+            const results = await pool.query(sql, [portfolioId, investmentId, userId]);
+            console.log(results);
+            res.send({ success: true, message: "The holding was successfully deleted." });
+            return;
+        }
+    }
+    catch (err) {
+        console.log(err);
+    }
+    res.send({ success: false, message: "An error occurred.  The holding was not deleted." });
+});
+
+app.post('/portfolios/:portfolioid/holding/:investmentid', async (req, res) => {
+    try {
+        if (req.session && req.session.userId) {
+            const userId = req.session.userId;
+            const portfolioId = req.params.portfolioid;
+            const investmentId = req.params.investmentid;
+            const investment = req.body;
+
+            const sql = `UPDATE holdings 
+                INNER JOIN portfolios ON holdings.portfolio_id = portfolios.portfolio_id
+                SET average_cost_basis = ?, 
+                    number_shares = ?, 
+                    date_updated = NOW()
+                WHERE holdings.investment_id = ? AND holdings.portfolio_id = ? AND user_id = ?`
+            const results = await pool.query(sql, [investment.basis, investment.shares, investmentId, portfolioId, userId]);
+            if (results.affectedRows > 0) {
+                //Successfully Added
+                res.send({ success: true, message: "The holding was successfully updated." });
+                return;
+            }
+        }
+    }
+    catch (err) {
+        console.log(err);
+    }
+    res.send({ success: false, message: "The holding could not be updated." });
 });
 
 app.delete('/portfolios/:id', async (req, res) => {
