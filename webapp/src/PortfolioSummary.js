@@ -6,7 +6,7 @@ export default class PortfolioSummary extends React.PureComponent {
     calculateSum = (data, key, id, value) => {
         const results = data.reduce((entries, holding) => {
             const name = holding[key];
-            const total = (entries[name] ? entries[name].total : 0) + holding[value];
+            const total = (entries[name] ? entries[name].total : 0) + (holding[value] * holding["number_shares"]);
 
             return {
                 ...entries,

@@ -5,15 +5,17 @@ DROP TABLE IF EXISTS `users`;
 DROP TABLE IF EXISTS `investmenttypes`;
 DROP TABLE IF EXISTS `sectors`;
 
+--Create users table.  This is needed for login/registration
 CREATE TABLE `users` (
   `user_id` INT(11) NOT NULL AUTO_INCREMENT,
   `username` VARCHAR(25) NOT NULL,
   `password_hash` BINARY(60) NOT NULL,
-  `last_login` TIMESTAMP on update CURRENT_TIMESTAMP NULL,
+  `last_login` TIMESTAMP on update CURRENT_TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`user_id`),
   UNIQUE KEY `username` (`username`)
 ) ENGINE=InnoDB;
 
+--Create portfolios table - This tracks portfolios for a specific user
 CREATE TABLE `portfolios` ( 
   `portfolio_id` INT(11) NOT NULL AUTO_INCREMENT,
   `user_id` INT(11) NOT NULL,
@@ -22,7 +24,7 @@ CREATE TABLE `portfolios` (
   CONSTRAINT `portfolio_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`)
 ) ENGINE = InnoDB;
 
-
+--Create investment types table - This tracks the types of investments in the investments table.
 CREATE TABLE `investmenttypes` ( 
   `investmenttype_id` INT(11) NOT NULL AUTO_INCREMENT,
   `api_code` VARCHAR(10) DEFAULT NULL,
@@ -30,12 +32,15 @@ CREATE TABLE `investmenttypes` (
   PRIMARY KEY (`investmenttype_id`)
 ) ENGINE = InnoDB;
 
+--Create sectors table - This tracks the sector to which an investment is related.
 CREATE TABLE `sectors` ( 
   `sector_id` INT(11) NOT NULL AUTO_INCREMENT,
   `sector_name` VARCHAR(100) NOT NULL, 
   PRIMARY KEY (`sector_id`)
 ) ENGINE = InnoDB;
 
+--Create Investments table - If a user_id has been entered for an investment, it will represent an manual investment available ONLY to that user, and the user will need to provide pricing detail manually.
+--Alternatively, if an investment does not have a user_id associated, it is an investment that has been added via the API, and will be automatically updated.
 CREATE TABLE `investments` ( 
   `investment_id` INT(11) NOT NULL AUTO_INCREMENT,
   `symbol` VARCHAR(50) DEFAULT NULL,
@@ -51,6 +56,7 @@ CREATE TABLE `investments` (
   CONSTRAINT `investments_ibfk_3` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE = InnoDB;
 
+--Create Holdings Table.  This will maintain a many-to-many relationship between investments and portfolios 
 CREATE TABLE `holdings` ( 
   `portfolio_id` INT(11) NOT NULL,
   `investment_id` INT(11) NOT NULL,
@@ -62,10 +68,14 @@ CREATE TABLE `holdings` (
   CONSTRAINT `holdings_ibfk_2` FOREIGN KEY (`investment_id`) REFERENCES `investments` (`investment_id`) ON DELETE CASCADE
 ) ENGINE = InnoDB;
 
+--Insert Demo Information
 INSERT INTO users (username, password_hash) VALUES ('TestUser', '$2b$10$an7Mdvqxap5FlWLdz279RuaRSUiLg/PiWYCGu/G/20UBSiKDc5FnK');
 INSERT INTO portfolios (portfolio_name, user_id) VALUES ('401K', 1);
 INSERT INTO portfolios (portfolio_name, user_id) VALUES ('Roth', 1);
 INSERT INTO portfolios (portfolio_name, user_id) VALUES ('Taxable', 1);
+
+--SEED INVESTMENT TYPES - This information has been consolidated using the API documentation available at https://iextrading.com/developer/docs/#company
+--This was updated based on detail for the issueType of a security.
 INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('USER', 'User Investment');
 INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('N/A', 'Unclassified');
 INSERT INTO investmenttypes (api_code, investmenttype_name) VALUES ('AD', 'American Depository Receipt (ADR)');

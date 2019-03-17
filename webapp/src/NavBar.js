@@ -15,6 +15,9 @@ const loginButton = (userDetail) => {
     if (userDetail.loggedIn) {
         return (
             <Nav className="ml-auto" navbar>
+                <span className="navbar-text">
+                    NOTE: Please Use Chrome For Grading Purposes
+                </span>
                 <NavItem>
                     <NavLink tag={Link} to="./">Portfolios</NavLink>
                 </NavItem>
@@ -30,6 +33,9 @@ const loginButton = (userDetail) => {
     else {
         return (
             <Nav className="ml-auto" navbar>
+                <span className="navbar-text">
+                    NOTE: Please Use Chrome For Grading Purposes
+                </span>
                 <NavItem>
                     <NavLink tag={Link} to="./">Main</NavLink>
                 </NavItem>

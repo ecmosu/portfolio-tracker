@@ -21,7 +21,7 @@ export default class Portfolio extends React.Component {
 
         this.state = {
             showSection: true,
-            selectedSecurity: { investment_id: "", symbol: "", investmenttype_name: "", sector_name: ""},
+            selectedSecurity: { investment_id: "", symbol: "", investmenttype_name: "", sector_name: "" },
             currentSector: "",
             currentAsset: "",
             holdings: [],
@@ -305,7 +305,11 @@ export default class Portfolio extends React.Component {
             this.setState({
                 deleteModal: { investment_id: "" },
                 currentModal: "",
+                selectedSecurity: { investment_id: "", symbol: "", investmenttype_name: "", sector_name: "" },
+                currentSector: "",
+                currentAsset: ""
             });
+
             this.props.appState.onStatusMessageChange(false, '');
             this.props.appState.onLoadingChange(true);
             const response = await fetch(`./portfolios/${this.props.match.params.id}/holding/${investmentId}`, {
@@ -402,10 +406,10 @@ export default class Portfolio extends React.Component {
             </td>
             <td style={{ minWidth: '50px', width: '50px' }}>
                 <div>
-                    {this.createColoredPercent(-.0181)}
+                    {this.createColoredPercent((total.current - total.closing) / total.closing)}
                 </div>
                 <div>
-                    {this.createColoredPercent(.0233)}
+                    {this.createColoredPercent((total.closing - total.basis) / total.basis)}
                 </div>
             </td>
         </tr>);
@@ -422,9 +426,24 @@ export default class Portfolio extends React.Component {
             </div>)
         }
 
-        // if (this.state.holdings.length === 0) {
-        //     return (<div>No holdings have been added to this portfolio.</div>)
-        // }
+        if (this.state.holdings.length === 0) {
+            return (<div>
+                <div className="accordion mt-3 pb-3" id="portfolioAccordian">
+                    <AddInvestment showSection={this.state.showSection === "Manage"}
+                        onToggle={this.handleTopToggle}
+                        runUpdates={this.updateHoldings}
+                        {...this.props}></AddInvestment>
+                    <ManageManualInvestments showSection={this.state.showSection === "Add"}
+                        onToggle={this.handleTopToggle}
+                        runUpdates={this.updateHoldings}
+                        {...this.props}></ManageManualInvestments>
+                </div>
+                <div>
+                    No investments have been added.  Please add investments from above.
+                </div>
+                {this.renderModal()}
+            </div>)
+        }
         else {
             return (
                 <div>
